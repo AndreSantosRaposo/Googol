@@ -1,6 +1,13 @@
 import java.util.Scanner;
 import java.util.InputMismatchException;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import static java.rmi.server.LogStream.log;
+
 public class Main {
     /**
      * <p>
@@ -12,7 +19,9 @@ public class Main {
      */
     public static void main(String[] args) {
         Scanner myObj = new Scanner(System.in);
-
+        Downloader down = new Downloader();
+        down.scrapURL("https://pt.wikipedia.org/wiki/Wikipédia:Página_principal");
+        /*
         while(true){
             try{
                 System.out.println(
@@ -40,17 +49,10 @@ public class Main {
                 System.out.println(e.getMessage());
             }
         }
+        */
+
 
     }
 
-    /**
-     * <p>
-     *     O método menu servirá para o utilizador poder escolher que operacào quer fazer, pedindo
-     *     um input numérico, correspondente a uma operacào
-     * </p>
-     */
-    private static void pesquisarTermos(){
-
-    }
 
 }
