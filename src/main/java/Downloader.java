@@ -42,10 +42,6 @@ public class Downloader {
             String doctext = doc.text();
             words = List.of(doctext.split(" "));
             String[] sentences = doctext.split("\\.");
-<<<<<<< HEAD:src/main/java/Downloader.java
-            //Text snippet will idealy have 3 sentences (or less if page dosent have 3 sentences).
-=======
->>>>>>> 442a3d9ffe163cff5613ed715b87721052d9774f:src/Downloader.java
             String textSnippet = String.join(".", Arrays.copyOfRange(sentences, 0, Math.min(3, sentences.length))) + ".";
 
             PageInfo pageInformation = new PageInfo(pageTitle, url, words, textSnippet);
@@ -56,12 +52,6 @@ public class Downloader {
                     .filter(link -> !link.isEmpty())
                     .toList();
 
-<<<<<<< HEAD:src/main/java/Downloader.java
-            
-
-        }catch (Exception e){
-            System.out.println(e.getMessage());
-=======
             System.out.println("Scraping concluído: " + url);
 
             // === Enviar aos Barrels via RMI ===
@@ -81,7 +71,6 @@ public class Downloader {
 
         } catch (Exception e) {
             System.out.println("Erro ao processar URL: " + e.getMessage());
->>>>>>> 442a3d9ffe163cff5613ed715b87721052d9774f:src/Downloader.java
         }
     }
 }

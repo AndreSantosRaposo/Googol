@@ -85,6 +85,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @param pageInfo
      * @param toUrls
      */
+    //--------------------------------------------------------
     public void addAllInformation(String url, PageInfo pageInfo, List<String> toUrls) throws RemoteException {
         addUrlToQueue(url);
         pagesInfo.put(pageInfo.getUrl(), pageInfo);
