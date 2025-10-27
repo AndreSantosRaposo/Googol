@@ -15,7 +15,7 @@ public class Downloader {
             String doctext = doc.text();
             words = List.of(doctext.split(" "));
             String[] sentences = doctext.split("\\.");
-            //Text snippet will idealy have 3 sentences.
+            //Text snippet will idealy have 3 sentences (or less if page dosent have 3 sentences).
             String textSnippet = String.join(".", Arrays.copyOfRange(sentences, 0, Math.min(3, sentences.length))) + ".";
 
             PageInfo PageInformation = new PageInfo(pageTitle,url,words,textSnippet);
@@ -24,6 +24,8 @@ public class Downloader {
                     .stream()
                     .map(link -> link.attr("abs:href"))
                     .toList();
+
+            
 
         }catch (Exception e){
             System.out.println(e.getMessage());
