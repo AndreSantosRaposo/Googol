@@ -4,6 +4,7 @@ import java.util.*;
 import java.io.*;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
+import java.util.concurrent.ConcurrentLinkedQueue; /** Import da queue*/
 
 /**
  * Barrel class that serves as storage of the app info
@@ -13,7 +14,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     int expectedInsertionsBloomFilter = 100000;
     double fpp = 0.01;
 
-    Queue<String> urlQueue;
+    Queue<String> urlQueue = new ConcurrentLinkedQueue<>();
+
+    /**Queue<String> urlQueue;tinhas assim mas eu acho que como esta em cima e melhot */
     //THis adjacency list will have the inlinks (values indicate the pages with links to the key page)
     HashMap<String, Set<String>> adjacencyList;
     HashMap<String, PageInfo> pagesInfo;
@@ -56,7 +59,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         System.out.println("Info saved to disk");
     }
 
-    /** LOads pagesInfo, adjacencyList amd BloomFilter from disk to memory */
+    /**
+     * LOads pagesInfo, adjacencyList amd BloomFilter from disk to memory
+     */
     public void loadInfo() {
         File pageInfoFile = new File(pageInfoFileName);
         if (pageInfoFile.exists()) {
@@ -103,6 +108,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Adds new URL to the queue
+     *
      * @param url
      */
     public void addUrlToQueue(String url) {
@@ -119,6 +125,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Adds new page info to the index
+     *
      * @param pageInfo
      */
     public void addPageInfo(PageInfo pageInfo) {
@@ -128,6 +135,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Adiciona um link na adjacencyList
+     *
      * @param fromUrl
      * @param toUrl
      */
@@ -138,6 +146,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Adiciona URL ao Bloom filter
+     *
      * @param url
      */
     public void addToBloomFilter(String url) {
@@ -147,13 +156,34 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Verifica se o Bloom filter contém uma URL
+     *
      * @param url
      */
     public boolean mightContain(String url) {
         return filter.mightContain(url);
     }
 
-    /** Imprime o estado atual para debug */
+
+    public List<PageInfo> searchPages(List<String> terms) throws RemoteException {
+        List<PageInfo> results = new ArrayList<>();
+        for (PageInfo page : pagesInfo.values()) {
+            boolean allPresent = true;
+            for (String term : terms) {
+                if (!page.getWords().contains(term.toLowerCase())) {
+                    allPresent = false;
+                    break;
+                }
+            }
+            if (allPresent) results.add(page);
+        }
+
+
+        return results;
+    }
+
+    /**
+     * Imprime o estado atual para debug
+     */
     public void printAll() {
         System.out.println("\n===== Barrel Current State =====");
         System.out.println("URLs in queue: " + urlQueue);
@@ -161,53 +191,5 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         System.out.println("Pages Info keys: " + pagesInfo.keySet());
         System.out.println("Bloom Filter test (example.com): " + filter.mightContain("https://example.com"));
         System.out.println("================================\n");
-    }
-
-    //TODO apagar  a maior parte das coisas aqui, estou a usar so para testar, gerado pelo chat
-    public static void main(String[] args) throws Exception {
-        String pageInfoFileName = "pageInfoTeste.ser";
-        String adjacencyFileName = "adjacencyTeste.ser";
-        String bloomFileName = "bloomTeste.bin";
-
-        Barrel barrel = new Barrel(pageInfoFileName, adjacencyFileName, bloomFileName);
-
-        // Se o ficheiro estiver vazio (primeira execução), adiciona dados de teste
-        if (barrel.pagesInfo.isEmpty() && barrel.adjacencyList.isEmpty()) {
-            System.out.println("🔧 Filling structures for the first time...");
-
-            barrel.addUrlToQueue("https://example.com");
-            barrel.addUrlToQueue("https://openai.com");
-            barrel.addUrlToQueue("https://uc.pt");
-
-            PageInfo page1 = new PageInfo("Example", "https://example.com", List.of("sample", "page", "example"), "Example summary");
-            PageInfo page2 = new PageInfo("OpenAI", "https://openai.com", List.of("ai", "language", "model"), "OpenAI summary");
-            PageInfo page3 = new PageInfo("UC", "https://uc.pt", List.of("university", "coimbra", "education"), "UC summary");
-
-            barrel.addPageInfo(page1);
-            barrel.addPageInfo(page2);
-            barrel.addPageInfo(page3);
-
-            barrel.addAdjacency("https://example.com", "https://openai.com");
-            barrel.addAdjacency("https://example.com", "https://uc.pt");
-            barrel.addAdjacency("https://openai.com", "https://example.com");
-
-            barrel.addToBloomFilter("https://example.com");
-            barrel.addToBloomFilter("https://openai.com");
-            barrel.addToBloomFilter("https://uc.pt");
-
-            barrel.saveInfo(); // salva tudo
-        }
-
-        // Mostra o estado atual
-        barrel.printAll();
-
-        // Testa se o bloom filter funciona
-        System.out.println("Contains https://uc.pt ? " + barrel.mightContain("https://uc.pt"));
-        System.out.println("Contains https://google.com ? " + barrel.mightContain("https://google.com"));
-
-        // Recarrega tudo do disco (simula próxima execução)
-        System.out.println("\nReloading from disk...");
-        Barrel barrelReloaded = new Barrel(pageInfoFileName, adjacencyFileName, bloomFileName);
-        barrelReloaded.printAll();
     }
 }
