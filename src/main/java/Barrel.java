@@ -199,6 +199,23 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         System.out.println("================================\n");
     }
 
+    public List<PageInfo> searchPages(List<String> terms) throws RemoteException {
+        List<PageInfo> results = new ArrayList<>();
+        for (PageInfo page : pagesInfo.values()) {
+            boolean allPresent = true;
+            for (String term : terms) {
+                if (!page.getWords().contains(term.toLowerCase())) {
+                    allPresent = false;
+                    break;
+                }
+            }
+            if (allPresent) results.add(page);
+        }
+
+
+        return results;
+    }
+
     public static void main(String[] args) throws Exception {
         String dbPath = "barrelMapDB.db";
 

@@ -1,8 +1,7 @@
 import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public interface BarrelIndex extends Remote {
 
@@ -18,4 +17,7 @@ public interface BarrelIndex extends Remote {
     Map<String, PageInfo> getPagesInfoMap() throws RemoteException;
     Map<String, Set<String>> getAdjacencyListMap() throws RemoteException;
     byte[] getBloomFilterBytes() throws RemoteException;
+
+    // Pesquisa remota
+    List<PageInfo> searchPages(List<String> terms) throws RemoteException;
 }
