@@ -1,4 +1,7 @@
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.io.*;
@@ -7,7 +10,6 @@ import java.util.concurrent.ConcurrentMap;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 import org.mapdb.*;
-
 
 
 
@@ -24,17 +26,61 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     ConcurrentMap<String, Set<String>> adjacencyList;
     ConcurrentMap<String, PageInfo> pagesInfo;
     BloomFilter<String> filter;
-
+    String registryName;
+    private HashMap<String,Integer> expectedSeqNumbers;
+    private HashMap<String,Set<Integer>> receivedSeqNumbers;
+    int semaforo;
     DB db;
     String dbPath;
 
-    public Barrel(String dbPath) throws RemoteException {
+    public Barrel(String dbPath, String registryName) throws IOException {
         super();
+        this.registryName = registryName;
+        semaforo = 0;
         this.dbPath = dbPath;
         urlQueue = new LinkedList<>();
         filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
+        expectedSeqNumbers = new HashMap<>();
+        receivedSeqNumbers = new HashMap<>();
 
-        loadInfo();
+        askForInfo();
+        semaforo = 1;
+    }
+
+    private void askForInfo() throws IOException {
+        try {
+            if (true) { //se for o primeiro barrel, fazer laod normalmente
+                loadInfo();
+            } else {
+                /*
+                //pedir info ao outro barrel (como vou buscar esse barrel no registry)
+                pagesInfo = barrelIndex.getPagesInfoMap();
+                adjacencyList = barrelIndex.getAdjacencyListMap();
+                // Load BloomFilter
+                File bloomFile = new File(dbPath + "_bloom.bin");
+                if (bloomFile.exists()) {
+                    try (InputStream in = new FileInputStream(bloomFile)) {
+                        filter = barrelIndex.getBloomFilterBytes();
+                        System.out.println("Bloom filter loaded from other barrel.");
+                    } catch (IOException e) {
+                        System.err.println("Error loading Bloom filter: " + e.getMessage());
+                        filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
+                    }
+                } else {
+                    System.out.println("Bloom filter file not found. Created new empty filter.");
+                }
+                saveInfo();
+
+                 */
+            }
+
+        }catch(Exception e){
+            System.err.println("Error obtaining info from other barrel: " + e.getMessage());
+            // Fallback to loading from MapDB
+            loadInfo();
+        }/*catch (IOException e) {
+            throw new IOException("Error: " + e.getMessage());
+        }*/
     }
 
     /**
@@ -70,30 +116,49 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     /**
      * Save all the information to MapDB
      * */
-    private void saveInfo() throws IOException, RemoteException {
+    private void saveInfo() throws IOException {
         db.commit();
         try (OutputStream out = new FileOutputStream(dbPath + "_bloom.bin")) {
             filter.writeTo(out);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         System.out.println("Info saved to MapDB.");
     }
 
-    /**
-     * Add all information at once
-     * To be used by the downloader after parsing a page
-     * @param url
-     * @param pageInfo
-     * @param toUrls
-     */
-    //--------------------------------------------------------
-    public void addAllInformation(String url, PageInfo pageInfo, List<String> toUrls) throws RemoteException {
-        addUrlToQueue(url);
-        pagesInfo.put(pageInfo.getUrl(), pageInfo);
-        //Add to URL found, the current URL
-        for (String toUrl : toUrls) {
-            addAdjacency(toUrl, url);
+    public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException {
+        // garantir estruturas para o remetente
+        Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
+        expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
+
+        // ignorar duplicados
+        if (received.contains(seqNumber)) {
+            System.out.println("Seq " + seqNumber + " já recebido. Ignorado.");
+            return;
         }
-        addToBloomFilter(url);
+
+        // detetar lacunas antes de qualquer retorno
+        checkForMissingMessages(seqNumber, nome);
+
+        // aplicar efeitos
+        pagesInfo.put(page.getUrl(), page);
+        filter.put(page.getUrl());
+        for (String link : urls) {
+            Set<String> current = adjacencyList.getOrDefault(link, new HashSet<>());
+            current.add(page.getUrl());
+            adjacencyList.put(link, current); // ← Força o MapDB a detetar a mudança
+            urlQueue.add(link);
+        }
+
+        // marcar como recebido (mesmo Set guardado no mapa)
+        received.add(seqNumber);
+
+        // avançar expected apenas enquanto houver sequência contígua recebida
+        int e = expectedSeqNumbers.get(nome);
+        while (received.contains(e)) e++;
+        expectedSeqNumbers.put(nome, e);
+
+        System.out.println("Mensagem aplicada com seqNumber: " + seqNumber + " (expected agora=" + e + ")");
     }
 
     /**
@@ -113,7 +178,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     // ONly used in the main (for testing) when there is no data
     //Delete when not needed
-    public void addPageInfo(PageInfo pageInfo) {
+    public void addPageInfo(PageInfo pageInfo) throws RemoteException {
         pagesInfo.put(pageInfo.getUrl(), pageInfo);
         System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
     }
@@ -123,7 +188,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @param fromUrl
      * @param toUrl
      */
-    private void addAdjacency(String fromUrl, String toUrl) {
+    public void addAdjacency(String fromUrl, String toUrl) throws RemoteException{
         adjacencyList.computeIfAbsent(toUrl, k -> new HashSet<>()).add(fromUrl);
         System.out.println("Added edge: " + fromUrl + " -> " + toUrl);
     }
@@ -132,7 +197,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * Add URL to Bloom filter
      * @param url
      */
-    private void addToBloomFilter(String url) {
+    public void addToBloomFilter(String url) throws RemoteException{
         filter.put(url);
         System.out.println("URL added to Bloom filter: " + url);
     }
@@ -217,10 +282,46 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         return results;
     }
 
-    public static void main(String[] args) throws Exception {
+    private void checkForMissingMessages(int receivedSeqNumber, String nome) {
+        int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
+        Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
+
+        // Verificar se há falhas entre expectedSeqNumber e receivedSeqNumber
+        if (receivedSeqNumber > expectedSeqNumber) {
+            System.out.println("Detetada lacuna! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
+
+            // Pedir reenvio de todas as mensagens em falta
+            for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
+                if (!receivedSeqNumbers.get(nome).contains(missing)) {
+                    requestMissingMessage(missing,nome);
+                }
+            }
+        }
+    }
+
+    private void requestMissingMessage(int missingSeqNumber, String nome) {
+        try {
+            Registry reg = LocateRegistry.getRegistry(); // host/port por omissão; ajuste se necessário
+            DownloaderIndex downloader = (DownloaderIndex) reg.lookup(nome);
+
+            if (downloader == null) {
+                System.err.println("Downloader não está disponível para pedir reenvio.");
+                return;
+            }
+
+            System.out.println("A pedir reenvio da mensagem com seqNumber: " + missingSeqNumber);
+            downloader.reSendMessages(missingSeqNumber, this);
+        } catch (NotBoundException e) {
+            System.err.println("Nome não ligado no RMI Registry: " + nome);
+        } catch (RemoteException e) {
+            System.err.println("Erro de RMI ao pedir reenvio da mensagem " + missingSeqNumber + ": " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) throws RemoteException, Exception {
         String dbPath = "barrelMapDB.db";
 
-        Barrel barrel = new Barrel(dbPath);
+        Barrel barrel = new Barrel(dbPath,"ahhhh");
 
         if (barrel.pagesInfo.isEmpty() && barrel.adjacencyList.isEmpty()) {
             System.out.println("🔧 Filling structures for the first time...");

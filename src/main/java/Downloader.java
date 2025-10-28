@@ -1,5 +1,7 @@
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
+
+import java.rmi.RemoteException;
 import java.util.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -7,8 +9,13 @@ import java.rmi.registry.Registry;
 
 
 public class Downloader {
-    private final List<BarrelIndex> barrels = new ArrayList<>();
-
+    private final List<BarrelIndex> barrels;
+    private HashMap<Integer,HistoryMessage> historyBuffer;
+    int seqNumber;
+    List<String> hosts;
+    List<Integer> ports;
+    List<String> names;
+    String name;
     /**
      * 🔹 Construtor para múltiplos Barrels via RMI.
      *
@@ -16,7 +23,15 @@ public class Downloader {
      * @param ports lista das portas RMI
      * @param names lista dos nomes no registry
      */
-    public Downloader(List<String> hosts, List<Integer> ports, List<String> names) {
+    public Downloader(List<String> hosts, List<Integer> ports, List<String> names, String name) {
+        historyBuffer = new HashMap<>();
+        barrels = new ArrayList<>();
+        seqNumber =0;
+        this.hosts = hosts;
+        this.ports = ports;
+        this.names = names;
+        this.name = name;
+
         if (hosts.size() != ports.size() || hosts.size() != names.size()) {
             throw new IllegalArgumentException("As listas de hosts, ports e names devem ter o mesmo tamanho!");
         }
@@ -33,42 +48,70 @@ public class Downloader {
         }
     }
 
+    // Construtor auxiliar só para testes (não abre RMI)
+    Downloader(String nome, List<BarrelIndex> barrels) {
+        this.name = nome;
+        this.barrels = barrels;
+        this.historyBuffer = new HashMap<>();
+        this.seqNumber = 0;
+        this.hosts = List.of();
+        this.ports = List.of();
+        this.names = List.of();
+    }
+
+    // Helper de teste para povoar o histórico
+    void addToHistory(int seq, HistoryMessage msg) {
+        historyBuffer.put(seq, msg);
+    }
+
+    /**
+     * Method that resends lost messages detected by barrels
+     * @param seqNumber
+     */
+    public void reSendMessages(int seqNumber, BarrelIndex requestingBarrel) throws RemoteException {
+        HistoryMessage message = historyBuffer.get(seqNumber);
+
+        if (message == null) {
+            System.err.println("Mensagem com seqNumber " + seqNumber + " não encontrada no histórico.");
+            return;
+        }
+
+        System.out.println("Reenviando mensagem com seqNumber: " + seqNumber + " ao barrel que solicitou.");
+
+        try {
+            requestingBarrel.receiveMessage(seqNumber, message.getPage(), message.getUrls(), name);
+            System.out.println("Mensagem reenviada com sucesso ao Barrel solicitante.");
+        } catch (Exception e) {
+            System.err.println("Erro ao reenviar dados ao Barrel: " + e.getMessage());
+        }
+    }
 
     public void scrapURL(String url) {
-        List<String> words = new ArrayList<>();
         try {
             Document doc = Jsoup.connect(url).get();
             String pageTitle = doc.title();
             String doctext = doc.text();
-            words = List.of(doctext.split(" "));
+            List<String> words = List.of(doctext.split(" "));
             String[] sentences = doctext.split("\\.");
             String textSnippet = String.join(".", Arrays.copyOfRange(sentences, 0, Math.min(3, sentences.length))) + ".";
-
             PageInfo pageInformation = new PageInfo(pageTitle, url, words, textSnippet);
 
             List<String> hrefs = doc.select("a[href]")
-                    .stream()
-                    .map(link -> link.attr("abs:href"))
-                    .filter(link -> !link.isEmpty())
-                    .toList();
+                    .stream().map(link -> link.attr("abs:href"))
+                    .filter(link -> !link.isEmpty()).toList();
 
-            System.out.println("Scraping concluído: " + url);
+            // gerar seq, guardar no histórico e enviar com seqNumber
+            int currentSeq = seqNumber++;
+            historyBuffer.put(currentSeq, new HistoryMessage(pageInformation, hrefs));
 
-            // === Enviar aos Barrels via RMI ===
             for (BarrelIndex barrel : barrels) {
                 try {
-                    barrel.addPageInfo(pageInformation);
-                    barrel.addToBloomFilter(url);
-                    for (String link : hrefs) {
-                        barrel.addAdjacency(url, link);
-                        barrel.addUrlToQueue(link);
-                    }
-                    System.out.println("Página enviada ao Barrel remoto.");
+                    barrel.receiveMessage(currentSeq, pageInformation, hrefs, name);
+                    System.out.println("Página enviada com seq=" + currentSeq + " ao Barrel remoto.");
                 } catch (Exception e) {
-                    System.err.println("Erro ao enviar dados a um Barrel: " + e.getMessage());
+                    System.err.println("Erro ao enviar ao Barrel: " + e.getMessage());
                 }
             }
-
         } catch (Exception e) {
             System.out.println("Erro ao processar URL: " + e.getMessage());
         }

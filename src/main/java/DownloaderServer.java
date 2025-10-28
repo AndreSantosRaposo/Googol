@@ -16,7 +16,7 @@ public class DownloaderServer {
         List<String> names = List.of(args[2].split(","));
 
         try {
-            Downloader downloader = new Downloader(hosts, ports, names);
+            Downloader downloader = new Downloader(hosts, ports, names, "nome_downloader");
             System.out.println("Downloader iniciado e ligado aos Barrels.");
 
 

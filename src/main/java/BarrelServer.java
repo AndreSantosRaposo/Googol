@@ -12,9 +12,10 @@ public class BarrelServer {
         int port = Integer.parseInt(args[1]);
 
         try {
-            Barrel barrel = new Barrel(barrelName + "_pageInfo.ser",
-                    barrelName + "_adjacency.ser",
-                    barrelName + "_bloom.bin");
+            Barrel barrel = new Barrel(
+                    barrelName + "_pageInfo.ser",
+                    barrelName + "_adjacency.ser"
+            );
 
             Registry registry = LocateRegistry.createRegistry(port);
             registry.rebind(barrelName, barrel);
