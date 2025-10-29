@@ -5,9 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f9e40559-bec0-4686-a1ba-04edc0a3b2a5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/Main.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/Main.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Barrel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Barrel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/BarrelTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/BarrelTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Barrel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Barrel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/BarrelTest.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/test-classes/BarrelTest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testdb.wal.0" beforeDir="false" afterPath="$PROJECT_DIR$/testdb.wal.0" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +39,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.Barrel.executor": "Run",
     "JUnit.BarrelTest.executor": "Run",
     "JUnit.DownloaderTest.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -77,7 +81,7 @@
       <workItem from="1761604872838" duration="52000" />
       <workItem from="1761604932326" duration="4208000" />
       <workItem from="1761609176915" duration="701000" />
-      <workItem from="1761643297078" duration="15756000" />
+      <workItem from="1761643297078" duration="18743000" />
     </task>
     <servers />
   </component>

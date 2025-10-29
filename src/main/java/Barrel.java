@@ -188,8 +188,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @param fromUrl
      * @param toUrl
      */
-    public void addAdjacency(String fromUrl, String toUrl) throws RemoteException{
-        adjacencyList.computeIfAbsent(toUrl, k -> new HashSet<>()).add(fromUrl);
+    public void addAdjacency(String fromUrl, String toUrl) throws RemoteException {
+        Set<String> current = adjacencyList.getOrDefault(toUrl, new HashSet<>());
+        current.add(fromUrl);
+        adjacencyList.put(toUrl, current); // ← Força o MapDB a detetar a mudança
         System.out.println("Added edge: " + fromUrl + " -> " + toUrl);
     }
 
