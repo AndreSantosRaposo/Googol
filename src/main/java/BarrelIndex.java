@@ -4,9 +4,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 public interface BarrelIndex extends Remote {
-
-    // Method to get URL from the queue (called from Downloader)
-    String getUrlFromQueue() throws RemoteException;
     //Method to add URL to the queue (called from Gateway and Downloader)
     void addUrlToQueue(String url) throws RemoteException;
 
@@ -19,6 +16,9 @@ public interface BarrelIndex extends Remote {
     ConcurrentMap<String, PageInfo> getPagesInfoMap() throws RemoteException;
     ConcurrentMap<String, Set<String>> getAdjacencyListMap() throws RemoteException;
     byte[] getBloomFilterBytes() throws RemoteException;
+    String getUrlFromQueue() throws RemoteException;
+    ConcurrentMap<String, Set<String>> getInvertedIndexMap() throws RemoteException;
+
 
     void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException;
 

@@ -5,16 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f9e40559-bec0-4686-a1ba-04edc0a3b2a5" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Barrel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Barrel.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/BarrelIndex.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/BarrelIndex.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/BarrelTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/BarrelTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/Barrel.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/BarrelIndex.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/test-classes/BarrelTest.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/test-classes/DownloaderTest.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Barrel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Barrel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/BarrelIndex.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/BarrelIndex.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -187,6 +183,7 @@
       <workItem from="1761643297078" duration="18743000" />
       <workItem from="1761746365523" duration="12201000" />
       <workItem from="1761819877574" duration="4697000" />
+      <workItem from="1761824616624" duration="3100000" />
     </task>
     <servers />
   </component>

@@ -31,6 +31,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     String registryName;
     private ConcurrentMap<String, Integer> expectedSeqNumbers;
     private ConcurrentMap<String, Set<Integer>> receivedSeqNumbers;
+    private ConcurrentMap<String, Set<String>> invertedIndex;
 
     //Sync variables
     private final Object queueLock = new Object();
@@ -38,6 +39,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     private final Object filterLock = new Object();
     private final Object pageInfoLock = new Object();
     private final Object messageLock = new Object();
+    private final Object invertedIndexLock = new Object();
 
     int semaforo;
     DB db;
@@ -54,6 +56,8 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
         expectedSeqNumbers = new java.util.concurrent.ConcurrentHashMap<>();
         receivedSeqNumbers = new java.util.concurrent.ConcurrentHashMap<>();
+        // No construtor (antes de askForInfo)
+        invertedIndex = new ConcurrentHashMap<>();
 
         askForInfo();
         semaforo = 1;
@@ -74,7 +78,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             }
 
             if (otherBarrel != null) {
-                // Obter dados do outro barrel
                 loadFromOtherBarrel(otherBarrel);
             } else {
                 // É o primeiro barrel
@@ -93,6 +96,8 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                 pagesInfo = barrelIndex.getPagesInfoMap();
 
                 adjacencyList = barrelIndex.getAdjacencyListMap();
+                invertedIndex = barrelIndex.getInvertedIndexMap();
+
                 // Load BloomFilter
                 // Reconstruir BloomFilter a partir dos bytes
                 byte[] bloomFilterBytes = barrelIndex.getBloomFilterBytes();
@@ -127,6 +132,8 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
         pagesInfo = db.hashMap("pagesInfo", Serializer.STRING, Serializer.JAVA).createOrOpen();
         adjacencyList = db.hashMap("adjacencyList", Serializer.STRING, Serializer.JAVA).createOrOpen();
+        invertedIndex = db.hashMap("invertedIndex", Serializer.STRING, Serializer.JAVA).createOrOpen();
+
 
         // Load BloomFilter
         File bloomFile = new File(dbPath + "_bloom.bin");
@@ -214,10 +221,23 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
+
+    // Substituir addPageInfo() completamente:
     public void addPageInfo(PageInfo pageInfo) throws RemoteException {
-        synchronized (pageInfoLock){
+        synchronized (pageInfoLock) {
             pagesInfo.put(pageInfo.getUrl(), pageInfo);
             System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
+        }
+
+        // Atualizar índice invertido com as palavras desta página
+        synchronized (invertedIndexLock) {
+            for (String word : pageInfo.getWords()) {
+                String lowerWord = word.toLowerCase();
+                Set<String> urls = invertedIndex.getOrDefault(lowerWord, ConcurrentHashMap.newKeySet());
+                urls.add(pageInfo.getUrl());
+                invertedIndex.put(lowerWord, urls);
+            }
+            System.out.println("Updated inverted index for URL: " + pageInfo.getUrl());
         }
     }
 
@@ -274,16 +294,19 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
-    public ConcurrentMap<String,Integer> getExpectedSeqNumber() throws RemoteException {
-        synchronized (messageLock){
-            return expectedSeqNumbers;
-        }
+
+    public ConcurrentMap<String, Integer> getExpectedSeqNumber() throws RemoteException {
+        // Cópia defensiva
+        return new ConcurrentHashMap<>(expectedSeqNumbers);
     }
 
     public ConcurrentMap<String, Set<Integer>> getReceivedSeqNumbers() throws RemoteException {
-        synchronized (messageLock){
-            return receivedSeqNumbers;
+        // Cópia profunda
+        ConcurrentMap<String, Set<Integer>> copy = new ConcurrentHashMap<>();
+        for (Map.Entry<String, Set<Integer>> entry : receivedSeqNumbers.entrySet()) {
+            copy.put(entry.getKey(), new HashSet<>(entry.getValue()));
         }
+        return copy;
     }
 
     /**
@@ -292,8 +315,8 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @throws RemoteException
      */
     public ConcurrentMap<String, PageInfo> getPagesInfoMap() throws RemoteException {
-        synchronized (pageInfoLock){
-            return pagesInfo;
+        synchronized (pageInfoLock) {
+            return new ConcurrentHashMap<>(pagesInfo);
         }
     }
 
@@ -303,8 +326,12 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @throws RemoteException
      */
     public ConcurrentMap<String, Set<String>> getAdjacencyListMap() throws RemoteException {
-        synchronized (adjacencyLock){
-            return adjacencyList;
+        synchronized (adjacencyLock) {
+            ConcurrentMap<String, Set<String>> copy = new ConcurrentHashMap<>();
+            for (Map.Entry<String, Set<String>> entry : adjacencyList.entrySet()) {
+                copy.put(entry.getKey(), new HashSet<>(entry.getValue()));
+            }
+            return copy;
         }
     }
 
@@ -324,6 +351,17 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
+    public ConcurrentMap<String, Set<String>> getInvertedIndexMap() throws RemoteException {
+        synchronized (invertedIndexLock) {
+            // Cópia profunda
+            ConcurrentMap<String, Set<String>> copy = new ConcurrentHashMap<>();
+            for (Map.Entry<String, Set<String>> entry : invertedIndex.entrySet()) {
+                copy.put(entry.getKey(), new HashSet<>(entry.getValue()));
+            }
+            return copy;
+        }
+    }
+
     /**
      * Print all current state (for debugging or statistics)
      */
@@ -336,23 +374,35 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         System.out.println("================================\n");
     }
 
+    // Substituir searchPages() para usar o índice invertido:
     public List<PageInfo> searchPages(List<String> terms) throws RemoteException {
-        List<PageInfo> results = new ArrayList<>();
-        synchronized (pageInfoLock){
-            for (PageInfo page : pagesInfo.values()) {
-                boolean allPresent = true;
-                for (String term : terms) {
-                    if (!page.getWords().contains(term.toLowerCase())) {
-                        allPresent = false;
-                        break;
-                    }
+        if (terms == null || terms.isEmpty()) return new ArrayList<>();
+
+        synchronized (invertedIndexLock) {
+            synchronized (pageInfoLock) {
+                // Obter URLs que contêm o primeiro termo
+                Set<String> resultUrls = new HashSet<>(
+                        invertedIndex.getOrDefault(terms.get(0).toLowerCase(), Collections.emptySet())
+                );
+
+                // Interseção com URLs dos restantes termos
+                for (int i = 1; i < terms.size(); i++) {
+                    Set<String> termUrls = invertedIndex.getOrDefault(terms.get(i).toLowerCase(), Collections.emptySet());
+                    resultUrls.retainAll(termUrls);
+                    if (resultUrls.isEmpty()) break; // otimização
                 }
-                if (allPresent) results.add(page);
+
+                // Converter URLs para PageInfo
+                List<PageInfo> results = new ArrayList<>();
+                for (String url : resultUrls) {
+                    PageInfo page = pagesInfo.get(url);
+                    if (page != null) results.add(page);
+                }
+
+                System.out.println("Search for " + terms + " returned " + results.size() + " results.");
+                return results;
             }
         }
-
-
-        return results;
     }
 
     private void checkForMissingMessages(int receivedSeqNumber, String nome) {
