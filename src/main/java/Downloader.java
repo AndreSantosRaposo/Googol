@@ -2,61 +2,52 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-
-
-public class Downloader {
+public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     private final List<BarrelIndex> barrels;
-    private HashMap<Integer,HistoryMessage> historyBuffer;
-    int seqNumber;
-    List<String> hosts;
-    List<Integer> ports;
-    List<String> names;
-    String name;
-    /**
-     * 🔹 Construtor para múltiplos Barrels via RMI.
-     *
-     * @param hosts lista dos endereços
-     * @param ports lista das portas RMI
-     * @param names lista dos nomes no registry
-     */
-    public Downloader(List<String> hosts, List<Integer> ports, List<String> names, String name) {
-        historyBuffer = new HashMap<>();
-        barrels = new ArrayList<>();
-        seqNumber =0;
-        this.hosts = hosts;
-        this.ports = ports;
-        this.names = names;
+    private HashMap<Integer, HistoryMessage> historyBuffer;
+    private int seqNumber;
+    private String name;
+
+
+    public Downloader(String name, String ipA, int portA, String nameA,
+                      String ipB, int portB, String nameB) throws RemoteException {
+        super();
         this.name = name;
+        this.historyBuffer = new HashMap<>();
+        this.seqNumber = 0;
+        this.barrels = new ArrayList<>();
 
-        if (hosts.size() != ports.size() || hosts.size() != names.size()) {
-            throw new IllegalArgumentException("As listas de hosts, ports e names devem ter o mesmo tamanho!");
+        try {
+            Registry regA = LocateRegistry.getRegistry(ipA, portA);
+            BarrelIndex barrel1 = (BarrelIndex) regA.lookup(nameA);
+            barrels.add(barrel1);
+            System.out.println(" Ligado ao Barrel A: " + nameA);
+        } catch (Exception e) {
+            System.err.println(" Erro ao ligar ao Barrel 1: " + e.getMessage());
         }
 
-        for (int i = 0; i < hosts.size(); i++) {
-            try {
-                Registry registry = LocateRegistry.getRegistry(hosts.get(i), ports.get(i));
-                BarrelIndex barrel = (BarrelIndex) registry.lookup(names.get(i));
-                barrels.add(barrel);
-                System.out.println("Ligado ao Barrel remoto: " + names.get(i));
-            } catch (Exception e) {
-                System.err.println(" Erro ao conectar ao Barrel " + names.get(i) + ": " + e.getMessage());
-            }
+        try {
+            Registry regB = LocateRegistry.getRegistry(ipB, portB);
+            BarrelIndex barrel2 = (BarrelIndex) regB.lookup(nameB);
+            barrels.add(barrel2);
+        } catch (Exception e) {
+            System.err.println(" Erro ao ligar ao Barrel 2: " + e.getMessage());
         }
+
     }
 
     // Construtor auxiliar só para testes (não abre RMI)
-    Downloader(String nome, List<BarrelIndex> barrels) {
+    Downloader(String nome, List<BarrelIndex> barrels) throws RemoteException {
         this.name = nome;
         this.barrels = barrels;
         this.historyBuffer = new HashMap<>();
         this.seqNumber = 0;
-        this.hosts = List.of();
-        this.ports = List.of();
-        this.names = List.of();
+
     }
 
     // Helper de teste para povoar o histórico

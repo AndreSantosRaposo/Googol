@@ -2,51 +2,40 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.List;
 
-
 public class DownloaderServer {
     public static void main(String[] args) {
-        if (args.length < 3) {
-            System.err.println("Uso: java DownloaderServer <hosts> <ports> <names>");
-            System.err.println("Exemplo: java DownloaderServer localhost,localhost port,port barrel1,barrel2");
-            System.exit(1);
-        }
-
-        List<String> hosts = List.of(args[0].split(","));
-        List<Integer> ports = List.of(args[1].split(",")).stream().map(Integer::parseInt).toList();
-        List<String> names = List.of(args[2].split(","));
+        String filename = "config.txt";
+        final int DOWNLOADER_LINE_INDEX = 4;
 
         try {
-            Downloader downloader = new Downloader(hosts, ports, names, "nome_downloader");
-            System.out.println("Downloader iniciado e ligado aos Barrels.");
+            List<String> downloaderConfig = FileManipulation.lineSplitter(filename, DOWNLOADER_LINE_INDEX, ";");
 
-
-            Registry registry = LocateRegistry.getRegistry(hosts.get(0), ports.get(0));
-            BarrelIndex mainBarrel = (BarrelIndex) registry.lookup(names.get(0));
-
-            System.out.println("A processar URLs da fila...");
-
-            while (true) {
-                try {
-                    // Pede um URL ao Barrel principal
-                    String nextUrl = mainBarrel.getUrlFromQueue();
-
-                    if (nextUrl != null) {
-                        System.out.println("Processando URL: " + nextUrl);
-                        // Faz o scraping e envia os resultados a todos os Barrels
-                        downloader.scrapURL(nextUrl);
-                    } else {
-                        // Nenhum URL disponível — espera 3 segundos antes de tentar novamente
-                        Thread.sleep(3000);
-                    }
-
-                } catch (Exception e) {
-                    System.err.println("Erro ao processar URL: " + e.getMessage());
-                }
+            if (downloaderConfig.size() < 3) {
+                System.err.println(" Linha " + (DOWNLOADER_LINE_INDEX + 1) + " incompleta");
+                return;
             }
 
+            String downloaderName = downloaderConfig.get(0).trim();
+            String downloaderIp = downloaderConfig.get(1).trim();
+            int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
+
+            List<String> barrel1Config = FileManipulation.lineSplitter(filename, 2, ";");
+            List<String> barrel2Config = FileManipulation.lineSplitter(filename, 3, ";");
+
+            Registry registry = LocateRegistry.createRegistry(downloaderPort);
+
+            Downloader downloader = new Downloader(
+                    downloaderName,
+                    barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()), barrel1Config.get(0).trim(),
+                    barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()), barrel2Config.get(0).trim()
+            );
+
+            registry.rebind(downloaderName, downloader);
+
+
+
         } catch (Exception e) {
-            System.err.println("Erro ao iniciar o DownloaderServer: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println(" Erro: " + e.getMessage());
         }
     }
 }

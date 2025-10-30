@@ -36,13 +36,13 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             try {
                 barrel.addUrlToQueue(url);
                 barrel.addToBloomFilter(url);
-                System.out.println("✅ URL adicionado ao Barrel remoto: " + url);
+                System.out.println(" URL adicionado ao Barrel remoto: " + url);
                 return;
             } catch (Exception e) {
-                System.err.println("⚠ Erro ao adicionar URL no Barrel: " + e.getMessage());
+                System.err.println(" Erro ao adicionar URL no Barrel: " + e.getMessage());
             }
         }
-        System.err.println("❌ Nenhum Barrel disponível para adicionar URL.");
+        System.err.println("Nenhum Barrel disponível para adicionar URL.");
     }
 
     /** Pesquisa por termos em um dos Barrels remotos */
@@ -65,7 +65,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
 
     /** Menu de interação local (sem cliente RMI externo) */
     public static void main(String[] args) throws Exception {
-        // === Ligar a Barrels remotos ===
         Registry r1 = LocateRegistry.getRegistry("localhost", 2001);
         Registry r2 = LocateRegistry.getRegistry("localhost", 2002);
 
