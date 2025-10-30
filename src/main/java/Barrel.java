@@ -64,27 +64,33 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     private void askForInfo() throws IOException {
-        try {
-            Registry registry = LocateRegistry.getRegistry();
-            String[] bindings = registry.list();
+        String filename = "config.txt";
+        final int OTHER_BARREL_INDEX = 3;
 
-            // Procurar outro barrel ativo
-            BarrelIndex otherBarrel = null;
-            for (String name : bindings) {
-                if (name.startsWith("Barrel") && !name.equals(registryName)) {
-                    otherBarrel = (BarrelIndex) registry.lookup(name);
-                    break;
-                }
+        try {
+            List<String> parts = FileManipulation.lineSplitter(filename, OTHER_BARREL_INDEX, ";");
+
+            if (parts.size() < 3) {
+                System.err.println("Linha " + (OTHER_BARREL_INDEX + 1) + " do ficheiro de configuração está incorreta");
+                loadInfo();
+                return;
             }
+
+            String otherName = parts.get(0).trim();
+            String otherIp = parts.get(1).trim();
+            int otherPort = Integer.parseInt(parts.get(2).trim());
+
+            Registry registry = LocateRegistry.getRegistry(otherIp, otherPort);
+            BarrelIndex otherBarrel = (BarrelIndex) registry.lookup(otherName);
 
             if (otherBarrel != null) {
                 loadFromOtherBarrel(otherBarrel);
             } else {
-                // É o primeiro barrel
                 loadInfo();
             }
+
         } catch (Exception e) {
-            loadInfo();
+                loadInfo();
         }
     }
 

@@ -1,4 +1,4 @@
-import java.rmi.*;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
 
@@ -9,14 +9,16 @@ import java.util.List;
 public interface GatewayInterface extends Remote {
 
     /**
-     * @param terms lista de termos a pesquisar
+     * Pesquisa páginas que contêm os termos fornecidos.
+     * @param query consulta de pesquisa (palavras separadas por espaços)
      * @return lista de PageInfo correspondentes
      * @throws RemoteException em caso de falha de comunicação RMI
      */
-    List<PageInfo> search(List<String> terms) throws RemoteException;
+    List<PageInfo> search(String query) throws RemoteException;
 
     /**
-     * @param url URL a ser indexado
+     * Adiciona uma nova URL para ser indexada.
+     * @param url URL a ser indexada
      * @throws RemoteException em caso de falha de comunicação RMI
      */
     void addUrl(String url) throws RemoteException;

@@ -6,13 +6,13 @@ import java.util.List;
 public class BarrelServer {
     public static void main(String[] args) {
         String filename = "config.txt";
-        final int CONFIG_LINE_INDEX = 2;
+        final int CONFIG_LINE_INDEX = 2; // altera conforme o barrel
 
         try {
             List<String> parts = FileManipulation.lineSplitter(filename, CONFIG_LINE_INDEX, ";");
 
             if (parts.size() < 3) {
-                System.err.println("Linha " + (CONFIG_LINE_INDEX + 1) + " do ficheiro de configuração está incompleta!");
+                System.err.println("Linha " + (CONFIG_LINE_INDEX + 1) + " do ficheiro de configuração está incorreta");
                 return;
             }
 
@@ -20,18 +20,18 @@ public class BarrelServer {
             String ip = parts.get(1).trim();
             int port = Integer.parseInt(parts.get(2).trim());
 
-            System.out.printf("Barrel %s inicializado em %s:%d%n", barrelName, ip, port);
+            System.setProperty("java.rmi.server.hostname", ip);
 
             String dbPath = barrelName + "_MapDB.db";
-
             Barrel barrel = new Barrel(dbPath, barrelName);
 
-            LocateRegistry.createRegistry(port);
-            System.out.println(" Registry criado no porto " + port);
-            Registry registry = LocateRegistry.getRegistry(ip, port);
+            // Criar registry local neste porto
+            Registry registry = LocateRegistry.createRegistry(port);
+
+            // Registar o objeto remoto
             registry.rebind(barrelName, barrel);
 
-            System.out.printf("%s pronto em %s:%d%n", barrelName, ip, port);
+            System.out.println("[BarrelServer] '" + barrelName + "' registado e acessível em " + ip + ":" + port);
 
         } catch (FileNotFoundException e) {
             System.err.println("Erro: ficheiro '" + filename + "' não encontrado!");

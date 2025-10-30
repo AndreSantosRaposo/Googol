@@ -2,50 +2,83 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.List;
 
-
 public class DownloaderServer {
-    public static void main(String[] args) {
-        if (args.length < 3) {
-            System.err.println("Uso: java DownloaderServer <hosts> <ports> <names>");
-            System.err.println("Exemplo: java DownloaderServer localhost,localhost port,port barrel1,barrel2");
-            System.exit(1);
-        }
 
-        List<String> hosts = List.of(args[0].split(","));
-        List<Integer> ports = List.of(args[1].split(",")).stream().map(Integer::parseInt).toList();
-        List<String> names = List.of(args[2].split(","));
+    public static void main(String[] args) {
+        final String CONFIG_FILE = "config.txt";
+        final int DOWNLOADER_LINE_INDEX = 4; // linha do Downloader1
 
         try {
-            Downloader downloader = new Downloader(hosts, ports, names, "nome_downloader");
-            System.out.println("Downloader iniciado e ligado aos Barrels.");
+            // Ler configuração do Downloader
+            List<String> downloaderConfig = FileManipulation.lineSplitter(CONFIG_FILE, DOWNLOADER_LINE_INDEX, ";");
 
+            if (downloaderConfig.size() < 3) {
+                System.err.println("Linha " + (DOWNLOADER_LINE_INDEX + 1) + " incompleta no ficheiro de configuração.");
+                return;
+            }
 
-            Registry registry = LocateRegistry.getRegistry(hosts.get(0), ports.get(0));
-            BarrelIndex mainBarrel = (BarrelIndex) registry.lookup(names.get(0));
+            String downloaderName = downloaderConfig.get(0).trim();
+            String downloaderIp = downloaderConfig.get(1).trim();
+            int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
 
-            System.out.println("A processar URLs da fila...");
+            System.setProperty("java.rmi.server.hostname", downloaderIp);
+
+            // Ler configuração dos dois Barrels
+            List<String> barrel1Config = FileManipulation.lineSplitter(CONFIG_FILE, 2, ";");
+            List<String> barrel2Config = FileManipulation.lineSplitter(CONFIG_FILE, 3, ";");
+
+            // Criar registry local
+            Registry registry = LocateRegistry.createRegistry(downloaderPort);
+
+            // Criar instância do Downloader
+            Downloader downloader = new Downloader(
+                    downloaderName,
+                    barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()), barrel1Config.get(0).trim(),
+                    barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()), barrel2Config.get(0).trim()
+            );
+
+            // Registar o Downloader no registry local
+            registry.rebind(downloaderName, downloader);
+
+            Registry regBarrel1 = LocateRegistry.getRegistry(barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()));
+            Registry regBarrel2 = LocateRegistry.getRegistry(barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()));
+
+            BarrelIndex barrel1 = (BarrelIndex) regBarrel1.lookup(barrel1Config.get(0).trim());
+            BarrelIndex barrel2 = (BarrelIndex) regBarrel2.lookup(barrel2Config.get(0).trim());
+
+            // Ciclo principal
+            int currentBarrel = 0;
 
             while (true) {
                 try {
-                    // Pede um URL ao Barrel principal
-                    String nextUrl = mainBarrel.getUrlFromQueue();
+                    BarrelIndex targetBarrel;
 
-                    if (nextUrl != null) {
-                        System.out.println("Processando URL: " + nextUrl);
-                        // Faz o scraping e envia os resultados a todos os Barrels
-                        downloader.scrapURL(nextUrl);
+                    // Round robin entre os dois Barrels
+                    if (currentBarrel == 0) {
+                        targetBarrel = barrel1;
+                        currentBarrel = 1;
                     } else {
-                        // Nenhum URL disponível — espera 3 segundos antes de tentar novamente
+                        targetBarrel = barrel2;
+                        currentBarrel = 0;
+                    }
+
+                    // Pede um URL à fila do Barrel atual
+                    String nextUrl = targetBarrel.getUrlFromQueue();
+
+                    if (nextUrl != null && !nextUrl.isEmpty()) {
+                        downloader.scrapURL(nextUrl); // envia resultados a ambos os barrels
+                    } else {
                         Thread.sleep(3000);
                     }
 
                 } catch (Exception e) {
-                    System.err.println("Erro ao processar URL: " + e.getMessage());
+                    System.err.println("[Downloader] Erro durante o ciclo: " + e.getMessage());
+                    Thread.sleep(2000);
                 }
             }
 
         } catch (Exception e) {
-            System.err.println("Erro ao iniciar o DownloaderServer: " + e.getMessage());
+            System.err.println("[DownloaderServer] Erro ao iniciar: " + e.getMessage());
             e.printStackTrace();
         }
     }
