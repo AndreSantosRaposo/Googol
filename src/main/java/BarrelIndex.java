@@ -18,7 +18,8 @@ public interface BarrelIndex extends Remote {
     byte[] getBloomFilterBytes() throws RemoteException;
     String getUrlFromQueue() throws RemoteException;
     ConcurrentMap<String, Set<String>> getInvertedIndexMap() throws RemoteException;
-
+    ConcurrentMap<String, Integer> getExpectedSeqNumber() throws RemoteException;
+    ConcurrentMap<String, Set<Integer>> getReceivedSeqNumbers() throws RemoteException;
 
     void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException;
 

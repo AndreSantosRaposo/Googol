@@ -81,7 +81,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             int otherPort = Integer.parseInt(parts.get(2).trim());
 
             Registry registry = LocateRegistry.getRegistry(otherIp, otherPort);
+            System.out.println("✅ [DEBUG] Registry obtido com sucesso");
+
             BarrelIndex otherBarrel = (BarrelIndex) registry.lookup(otherName);
+            System.out.println("✅ [DEBUG] Lookup bem-sucedido! Outro Barrel encontrado: " + otherName);
 
             if (otherBarrel != null) {
                 loadFromOtherBarrel(otherBarrel);
@@ -90,36 +93,46 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             }
 
         } catch (Exception e) {
-                loadInfo();
+            System.out.println("Erro ao obter info do outro barrel: " + e.getMessage());
+            loadInfo();
         }
     }
 
     private void loadFromOtherBarrel(BarrelIndex barrelIndex) throws IOException {
         try {
-                expectedSeqNumbers = getExpectedSeqNumber();
-                receivedSeqNumbers = getReceivedSeqNumbers();
+            System.out.println("Obtaining info from other barrel...");
+            // 1. PRIMEIRO: Inicializar MapDB
+            db = DBMaker.fileDB(dbPath)
+                    .fileMmapEnableIfSupported()
+                    .closeOnJvmShutdown()
+                    .transactionEnable()
+                    .make();
 
-                pagesInfo = barrelIndex.getPagesInfoMap();
+            // 2. Criar os mapas do MapDB
+            pagesInfo = db.hashMap("pagesInfo", Serializer.STRING, Serializer.JAVA).createOrOpen();
+            adjacencyList = db.hashMap("adjacencyList", Serializer.STRING, Serializer.JAVA).createOrOpen();
+            invertedIndex = db.hashMap("invertedIndex", Serializer.STRING, Serializer.JAVA).createOrOpen();
 
-                adjacencyList = barrelIndex.getAdjacencyListMap();
-                invertedIndex = barrelIndex.getInvertedIndexMap();
+            // 3. Agora copiar dados do outro barrel
+            expectedSeqNumbers = barrelIndex.getExpectedSeqNumber();
+            receivedSeqNumbers = barrelIndex.getReceivedSeqNumbers();
 
-                // Load BloomFilter
-                // Reconstruir BloomFilter a partir dos bytes
-                byte[] bloomFilterBytes = barrelIndex.getBloomFilterBytes();
-                try (ByteArrayInputStream in = new ByteArrayInputStream(bloomFilterBytes)) {
-                    filter = BloomFilter.readFrom(in, Funnels.unencodedCharsFunnel());
-                    System.out.println("Bloom filter loaded from other barrel.");
-                } catch (IOException e) {
-                    System.err.println("Error loading Bloom filter: " + e.getMessage());
-                    filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
-                }
+            pagesInfo.putAll(barrelIndex.getPagesInfoMap());
+            adjacencyList.putAll(barrelIndex.getAdjacencyListMap());
+            invertedIndex.putAll(barrelIndex.getInvertedIndexMap());
 
-                saveInfo();
+            // 4. Carregar BloomFilter
+            byte[] bloomFilterBytes = barrelIndex.getBloomFilterBytes();
+            try (ByteArrayInputStream in = new ByteArrayInputStream(bloomFilterBytes)) {
+                filter = BloomFilter.readFrom(in, Funnels.unencodedCharsFunnel());
+                System.out.println("Bloom filter loaded from other barrel.");
+            }
 
-        }catch(Exception e){
+            // 5. Agora db está inicializado e pode fazer commit
+            saveInfo();
+
+        } catch(Exception e) {
             System.err.println("Error obtaining info from other barrel: " + e.getMessage());
-            // Fallback to loading from MapDB
             loadInfo();
         }
     }
@@ -130,6 +143,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * This will happen to the first barrel created
      * */
     private void loadInfo() {
+        System.out.println("Loading info from MapDB storage...");
         db = DBMaker.fileDB(dbPath)
                 .fileMmapEnableIfSupported()
                 .closeOnJvmShutdown()
