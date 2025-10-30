@@ -90,34 +90,34 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             }
 
         } catch (Exception e) {
-                loadInfo();
+            loadInfo();
         }
     }
 
     private void loadFromOtherBarrel(BarrelIndex barrelIndex) throws IOException {
         try {
-                expectedSeqNumbers = getExpectedSeqNumber();
-                receivedSeqNumbers = getReceivedSeqNumbers();
+            expectedSeqNumbers = getExpectedSeqNumber();
+            receivedSeqNumbers = getReceivedSeqNumbers();
 
-                pagesInfo = barrelIndex.getPagesInfoMap();
+            pagesInfo = barrelIndex.getPagesInfoMap();
 
-                adjacencyList = barrelIndex.getAdjacencyListMap();
-                invertedIndex = barrelIndex.getInvertedIndexMap();
+            adjacencyList = barrelIndex.getAdjacencyListMap();
+            invertedIndex = barrelIndex.getInvertedIndexMap();
 
-                // Load BloomFilter
-                // Reconstruir BloomFilter a partir dos bytes
-                byte[] bloomFilterBytes = barrelIndex.getBloomFilterBytes();
-                try (ByteArrayInputStream in = new ByteArrayInputStream(bloomFilterBytes)) {
-                    filter = BloomFilter.readFrom(in, Funnels.unencodedCharsFunnel());
-                    System.out.println("Bloom filter loaded from other barrel.");
-                } catch (IOException e) {
-                    System.err.println("Error loading Bloom filter: " + e.getMessage());
-                    filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
-                }
+            // Load BloomFilter
+            // Reconstruir BloomFilter a partir dos bytes
+            byte[] bloomFilterBytes = barrelIndex.getBloomFilterBytes();
+            try (ByteArrayInputStream in = new ByteArrayInputStream(bloomFilterBytes)) {
+                filter = BloomFilter.readFrom(in, Funnels.unencodedCharsFunnel());
+                System.out.println("Bloom filter loaded from other barrel.");
+            } catch (IOException e) {
+                System.err.println("Error loading Bloom filter: " + e.getMessage());
+                filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
+            }
 
-                saveInfo();
+            saveInfo();
 
-        }catch(Exception e){
+        } catch (Exception e) {
             System.err.println("Error obtaining info from other barrel: " + e.getMessage());
             // Fallback to loading from MapDB
             loadInfo();
@@ -128,7 +128,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * Load info from MapDB
      * This will be used in case I use my own files (I am the reference barrel)
      * This will happen to the first barrel created
-     * */
+     */
     private void loadInfo() {
         db = DBMaker.fileDB(dbPath)
                 .fileMmapEnableIfSupported()
@@ -158,11 +158,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Save all the information to MapDB
-     * */
+     */
     private void saveInfo() throws IOException {
         db.commit();
         try (OutputStream out = new FileOutputStream(dbPath + "_bloom.bin")) {
-            synchronized (filterLock){
+            synchronized (filterLock) {
                 filter.writeTo(out);
             }
         } catch (IOException e) {
@@ -172,7 +172,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException {
-        synchronized (messageLock){
+        synchronized (messageLock) {
             // garantir estruturas para o remetente
             Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
             expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
@@ -189,7 +189,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // aplicar efeitos
             addPageInfo(page);
             for (String link : urls) {
-                addAdjacency(page.getUrl(),link);
+                addAdjacency(page.getUrl(), link);
                 addUrlToQueue(link);
             }
             addToBloomFilter(page.getUrl());
@@ -209,6 +209,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     /**
      * Add URL to URL queue if it hasen't been indexed yet
      * This will be stored by URLs that downlaoder will parse
+     *
      * @param url
      */
     public void addUrlToQueue(String url) throws RemoteException {
@@ -249,6 +250,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Add adjacency (fromUrl → toUrl)
+     *
      * @param fromUrl
      * @param toUrl
      */
@@ -270,10 +272,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Add URL to Bloom filter
+     *
      * @param url
      */
-    public void addToBloomFilter(String url) throws RemoteException{
-        synchronized (filterLock){
+    public void addToBloomFilter(String url) throws RemoteException {
+        synchronized (filterLock) {
             filter.put(url);
             System.out.println("URL added to Bloom filter: " + url);
         }
@@ -281,21 +284,23 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Check if URL might have been already parsed
+     *
      * @param url
      * @return
      */
     //This needs to be called by the gateway when he is going to add urls manually
     private boolean mightContain(String url) {
-            return filter.mightContain(url);
+        return filter.mightContain(url);
     }
 
 
     /**
      * Get URL from queue
+     *
      * @return URL or null if queue is empty
      */
     public String getUrlFromQueue() throws RemoteException {
-        synchronized (queueLock){
+        synchronized (queueLock) {
             return urlQueue.poll();
         }
     }
@@ -317,6 +322,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Getter for pagesInfo map
+     *
      * @return pagesInfo map
      * @throws RemoteException
      */
@@ -328,6 +334,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Getter for adjacencyList map
+     *
      * @return adjacencyList map
      * @throws RemoteException
      */
@@ -343,11 +350,12 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     /**
      * Getter for Bloom filter bytes
+     *
      * @return bloom filter as byte array
      * @throws RemoteException
      */
     public byte[] getBloomFilterBytes() throws RemoteException {
-        synchronized (filterLock){
+        synchronized (filterLock) {
             try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 filter.writeTo(out);
                 return out.toByteArray();
@@ -412,7 +420,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     private void checkForMissingMessages(int receivedSeqNumber, String nome) {
-        int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
+        int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
         Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
 
         // Verificar se há falhas entre expectedSeqNumber e receivedSeqNumber
@@ -422,7 +430,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // Pedir reenvio de todas as mensagens em falta
             for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
                 if (!receivedSeqNumbers.get(nome).contains(missing)) {
-                    requestMissingMessage(missing,nome);
+                    requestMissingMessage(missing, nome);
                 }
             }
         }
@@ -447,37 +455,4 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
-    public static void main(String[] args) throws RemoteException, Exception {
-        String dbPath = "barrelMapDB.db";
-
-        Barrel barrel = new Barrel(dbPath,"ahhhh");
-
-        if (barrel.pagesInfo.isEmpty() && barrel.adjacencyList.isEmpty()) {
-            System.out.println("🔧 Filling structures for the first time...");
-
-            barrel.addUrlToQueue("https://example.com");
-            barrel.addUrlToQueue("https://openai.com");
-            barrel.addUrlToQueue("https://uc.pt");
-
-            PageInfo page1 = new PageInfo("Example", "https://example.com", List.of("sample", "page", "example"), "Example summary");
-            PageInfo page2 = new PageInfo("OpenAI", "https://openai.com", List.of("ai", "language", "model"), "OpenAI summary");
-            PageInfo page3 = new PageInfo("UC", "https://uc.pt", List.of("university", "coimbra", "education"), "UC summary");
-
-            barrel.addPageInfo(page1);
-            barrel.addPageInfo(page2);
-            barrel.addPageInfo(page3);
-
-            barrel.addAdjacency("https://example.com", "https://openai.com");
-            barrel.addAdjacency("https://example.com", "https://uc.pt");
-            barrel.addAdjacency("https://openai.com", "https://example.com");
-
-            barrel.addToBloomFilter("https://example.com");
-            barrel.addToBloomFilter("https://openai.com");
-            barrel.addToBloomFilter("https://uc.pt");
-
-            barrel.saveInfo();
-        }
-
-        barrel.printAll();
-    }
 }
