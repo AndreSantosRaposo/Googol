@@ -1,0 +1,23 @@
+# PowerShell: compilar
+mvn clean package
+
+# obter IP local (IPv4, ignora loopback e APIPA)
+$LOCAL_IP = (Get-NetIPAddress -AddressFamily IPv4 |
+             Where-Object { $_.IPAddress -ne '127.0.0.1' -and $_.IPAddress -notlike '169.*' } |
+             Select-Object -First 1 -ExpandProperty IPAddress)
+
+# iniciar rmiregistry na pasta de classes (usa o rmiregistry do JDK no PATH)
+Start-Process -FilePath "rmiregistry" -ArgumentList "1099" -WorkingDirectory "target\classes" -NoNewWindow
+
+# executar Gateway (substitua GatewayServer pelo nome FQCN se necessário)
+java -cp "target\classes;target\lib\*" GatewayServer
+
+# executar Barrel (outro processo)
+java -cp "target\classes;target\lib\*" BarrelServer
+java -cp "target\classes;target\lib\*" BarrelServer
+
+# executar Downloader
+java -cp "target\classes;target\lib\*" DownloaderServer
+
+# executar Cliente
+java -cp "target\classes;target\lib\*" Cliente
