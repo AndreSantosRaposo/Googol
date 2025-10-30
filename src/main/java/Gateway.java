@@ -1,123 +1,61 @@
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Implementação da Gateway.
- * Atua como ponto de interação com o utilizador e coordena os Barrels via RMI.
- * A interação com o utilizador é feita localmente (menu no terminal).
+ * Implementação da Gateway — intermedeia comunicação entre Cliente e Barrels.
  */
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
 
-    private final List<BarrelIndex> barrels;
-    private int nextBarrel = 0;
-    private final Map<String, List<PageInfo>> cache = new HashMap<>();
+    private final BarrelIndex barrel1;
+    private final BarrelIndex barrel2;
 
-    public Gateway(List<BarrelIndex> barrels) throws RemoteException {
+    public Gateway(BarrelIndex b1, BarrelIndex b2) throws RemoteException {
         super();
-        this.barrels = barrels;
+        this.barrel1 = b1;
+        this.barrel2 = b2;
     }
 
-    /** Seleciona o próximo Barrel (round-robin) */
-    private synchronized BarrelIndex getNextBarrel() {
-        if (barrels.isEmpty()) throw new IllegalStateException("Nenhum Barrel disponível.");
-        BarrelIndex b = barrels.get(nextBarrel);
-        nextBarrel = (nextBarrel + 1) % barrels.size();
-        return b;
+    /**
+     * Pesquisa nos dois Barrels e devolve a lista combinada.
+     */
+    @Override
+    public List<PageInfo> search(String query) throws RemoteException {
+        List<String> terms = List.of(query.toLowerCase().split("\\s+"));
+        List<PageInfo> results = new ArrayList<>();
+
+        try {
+            results.addAll(barrel1.searchPages(terms));
+        } catch (Exception e) {
+            System.err.println("Erro ao pesquisar no Barrel1: " + e.getMessage());
+        }
+
+        try {
+            results.addAll(barrel2.searchPages(terms));
+        } catch (Exception e) {
+            System.err.println("Erro ao pesquisar no Barrel2: " + e.getMessage());
+        }
+
+        return results;
     }
 
-    /** Adiciona um URL à fila de um Barrel remoto */
+    /**
+     * Adiciona URL para indexação (envia para o primeiro barrel disponível)
+     */
     @Override
     public void addUrl(String url) throws RemoteException {
-        for (int i = 0; i < barrels.size(); i++) {
-            BarrelIndex barrel = getNextBarrel();
+        try {
+            barrel1.addUrlToQueue(url);
+            System.out.println("URL enviado para Barrel1: " + url);
+        } catch (Exception e1) {
+            System.err.println("Barrel1 indisponível, tentando Barrel2...");
             try {
-                barrel.addUrlToQueue(url);
-                barrel.addToBloomFilter(url);
-                System.out.println(" URL adicionado ao Barrel remoto: " + url);
-                return;
-            } catch (Exception e) {
-                System.err.println(" Erro ao adicionar URL no Barrel: " + e.getMessage());
+                barrel2.addUrlToQueue(url);
+                System.out.println("URL enviado para Barrel2: " + url);
+            } catch (Exception e2) {
+                System.err.println("Nenhum Barrel disponível: " + e2.getMessage());
             }
         }
-        System.err.println("Nenhum Barrel disponível para adicionar URL.");
-    }
-
-    /** Pesquisa por termos em um dos Barrels remotos */
-    @Override
-    public List<PageInfo> search(List<String> terms) throws RemoteException {
-        if (cache.containsKey(terms)) return cache.get(terms);
-
-        for (int i = 0; i < barrels.size(); i++) {
-            BarrelIndex barrel = getNextBarrel();
-            try {
-                List<PageInfo> results = barrel.searchPages(terms);
-                cache.put(terms.toString(), results);
-                return results;
-            } catch (Exception e) {
-                System.err.println("⚠ Erro ao pesquisar no Barrel: " + e.getMessage());
-            }
-        }
-        return List.of();
-    }
-
-    /** Menu de interação local (sem cliente RMI externo) */
-    public static void main(String[] args) throws Exception {
-        Registry r1 = LocateRegistry.getRegistry("localhost", 2001);
-        Registry r2 = LocateRegistry.getRegistry("localhost", 2002);
-
-        BarrelIndex b1 = (BarrelIndex) r1.lookup("barrel1");
-        BarrelIndex b2 = (BarrelIndex) r2.lookup("barrel2");
-
-        List<BarrelIndex> barrels = List.of(b1, b2);
-        Gateway gateway = new Gateway(barrels);
-
-        Scanner sc = new Scanner(System.in);
-
-        while (true) {
-            System.out.println("\n=== MENU GATEWAY ===");
-            System.out.println("1. Adicionar URL para indexar");
-            System.out.println("2. Pesquisar termos");
-            System.out.println("0. Sair");
-            System.out.print("Opção: ");
-            String op = sc.nextLine().trim();
-
-            if (op.equals("0")) break;
-
-            switch (op) {
-                case "1" -> {
-                    System.out.print("Digite o URL: ");
-                    String url = sc.nextLine().trim();
-                    if (!url.isEmpty()) gateway.addUrl(url);
-                    else System.out.println("⚠ URL inválido.");
-                }
-                case "2" -> {
-                    System.out.print("Digite os termos de pesquisa: ");
-                    String line = sc.nextLine().trim();
-                    if (line.isEmpty()) {
-                        System.out.println("⚠ Nenhum termo introduzido.");
-                        break;
-                    }
-                    List<String> terms = Arrays.asList(line.split("\\s+"));
-                    List<PageInfo> results = gateway.search(terms);
-
-                    if (results.isEmpty()) {
-                        System.out.println("❌ Nenhuma página encontrada.");
-                    } else {
-                        int count = 0;
-                        for (PageInfo p : results) {
-                            count++;
-                            System.out.printf("%d. %s\n   URL: %s\n   Texto: %s\n\n",
-                                    count, p.getTitle(), p.getUrl(), p.getSmallText());
-                        }
-                    }
-                }
-                default -> System.out.println("⚠ Opção inválida.");
-            }
-        }
-
-        System.out.println("🚪 Programa encerrado.");
     }
 }

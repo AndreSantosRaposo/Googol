@@ -4,3 +4,4 @@ Barrel1; meuip; port;
 Barrel2; outroip; port;
 Downloader1; meuip; port;
 Downloader2; outroip; port;
+Ckiente; ip; port
