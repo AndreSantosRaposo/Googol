@@ -3,9 +3,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,12 +12,14 @@ public class BarrelTest {
 
     private Barrel barrel;
     private String testDbPath;
+    private ExecutorService executor;
 
     @BeforeEach
     void setUp() throws Exception {
         // Path único para cada teste evitar conflitos de lock
         testDbPath = "testdb_barrel_" + System.nanoTime();
         barrel = new Barrel(testDbPath, "test-barrel");
+        executor = Executors.newFixedThreadPool(10);
     }
 
     @AfterEach
@@ -264,5 +265,33 @@ public class BarrelTest {
         assertNotNull(bytes, "Bytes do Bloom filter não deviam ser null");
         assertTrue(bytes.length > 0, "Bloom filter devia ter dados");
     }
+
+    // ========== Teste 1: Múltiplas threads adicionando páginas ==========
+    @Test
+    void addPageInfo_multiplas_threads() throws Exception {
+        int numThreads = 10;
+        CountDownLatch latch = new CountDownLatch(numThreads);
+
+        for (int i = 0; i < numThreads; i++) {
+            int id = i;
+            executor.submit(() -> {
+                try {
+                    PageInfo page = new PageInfo("Page" + id, "https://page" + id + ".com",
+                            List.of("word" + id), "summary" + id);
+                    barrel.addPageInfo(page);
+                } catch (Exception e) {
+                    fail("Exception in thread " + id + ": " + e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await(5, TimeUnit.SECONDS);
+
+        Map<String, PageInfo> pages = barrel.getPagesInfoMap();
+        assertEquals(numThreads, pages.size(), "Todas as páginas deviam ter sido adicionadas");
+    }
+
 }
 
