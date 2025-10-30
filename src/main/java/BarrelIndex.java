@@ -1,6 +1,7 @@
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 
 public interface BarrelIndex extends Remote {
 
@@ -15,8 +16,8 @@ public interface BarrelIndex extends Remote {
     void addToBloomFilter(String url) throws RemoteException;
 
     // Métodos de obtenção de dados
-    Map<String, PageInfo> getPagesInfoMap() throws RemoteException;
-    Map<String, Set<String>> getAdjacencyListMap() throws RemoteException;
+    ConcurrentMap<String, PageInfo> getPagesInfoMap() throws RemoteException;
+    ConcurrentMap<String, Set<String>> getAdjacencyListMap() throws RemoteException;
     byte[] getBloomFilterBytes() throws RemoteException;
 
     void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException;

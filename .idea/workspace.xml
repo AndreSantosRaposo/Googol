@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f9e40559-bec0-4686-a1ba-04edc0a3b2a5" name="Changes" comment="">
+<<<<<<< HEAD
       <change afterPath="$PROJECT_DIR$/config.txt" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/src/main/java/FileManipulation.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
@@ -22,6 +23,18 @@
       <change beforePath="$PROJECT_DIR$/target/classes/HistoryMessage.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/HistoryMessage.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/PageInfo.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/PageInfo.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/UserInputExeption.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/UserInputExeption.class" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Barrel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Barrel.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/BarrelIndex.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/BarrelIndex.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/BarrelTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/BarrelTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Barrel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/BarrelIndex.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/BarrelTest.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/test-classes/DownloaderTest.class" beforeDir="false" />
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,20 +76,31 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Application.Barrel.executor&quot;: &quot;Run&quot;,
+<<<<<<< HEAD
     &quot;Application.BarrelServer.executor&quot;: &quot;Run&quot;,
+=======
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
     &quot;JUnit.BarrelTest.executor&quot;: &quot;Run&quot;,
     &quot;JUnit.DownloaderTest.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+<<<<<<< HEAD
     &quot;last_opened_file_path&quot;: &quot;C:/Users/PC/Desktop/UNIVERSIDADE/3Ano/1Semestre/SD/PROJETO/Googol&quot;,
+=======
+    &quot;last_opened_file_path&quot;: &quot;C:/UNI/projetos/3ano/sd-projeto/Googol&quot;,
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+<<<<<<< HEAD
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+=======
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenRunHelper&quot;,
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -99,6 +123,93 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+<<<<<<< HEAD
+=======
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="Googol" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Python.FlaskServer">
+      <module name="Googol" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="Tox" factoryName="Tox">
+      <module name="Googol" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docs" factoryName="Docutils task">
+      <module name="Googol" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="docutils_input_file" value="" />
+      <option name="docutils_output_file" value="" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="" />
+      <option name="docutils_open_in_browser" value="false" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="docs" factoryName="Sphinx task">
+      <module name="Googol" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="docutils_input_file" value="" />
+      <option name="docutils_output_file" value="" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="" />
+      <option name="docutils_open_in_browser" value="false" />
+      <method v="2" />
+    </configuration>
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -121,9 +232,14 @@
       <workItem from="1761604932326" duration="4208000" />
       <workItem from="1761609176915" duration="701000" />
       <workItem from="1761643297078" duration="18743000" />
+<<<<<<< HEAD
       <workItem from="1761746649514" duration="7634000" />
       <workItem from="1761758639257" duration="2615000" />
       <workItem from="1761823068207" duration="1307000" />
+=======
+      <workItem from="1761746365523" duration="12201000" />
+      <workItem from="1761819877574" duration="4697000" />
+>>>>>>> 4f7c02a51ec64abc2ee411c499bf812aa2acb598
     </task>
     <servers />
   </component>
