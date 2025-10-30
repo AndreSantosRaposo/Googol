@@ -235,10 +235,15 @@ public class BarrelTest {
         barrel.addPageInfo(page);
 
         Map<String, PageInfo> map1 = barrel.getPagesInfoMap();
-        map1.put("https://fake.com", null); // Modifica a cópia
+        int sizeBefore = map1.size();
+
+        // Tenta modificar a cópia (não deve afetar o original)
+        PageInfo fakePage = new PageInfo("Fake", "https://fake.com", List.of("fake"), "fake");
+        map1.put("https://fake.com", fakePage);
 
         Map<String, PageInfo> map2 = barrel.getPagesInfoMap();
-        assertFalse(map2.containsKey("https://fake.com"), "Modificação da cópia não devia afetar o original");
+        assertEquals(sizeBefore, map2.size(), "Modificação da cópia não devia afetar o original");
+        assertFalse(map2.containsKey("https://fake.com"), "URL fake não devia existir no original");
     }
 
     // ========== Testes para getAdjacencyListMap ==========
@@ -248,10 +253,16 @@ public class BarrelTest {
         barrel.addAdjacency("https://a.com", "https://b.com");
 
         Map<String, Set<String>> map1 = barrel.getAdjacencyListMap();
-        map1.put("https://fake.com", null); // Modifica a cópia
+        int sizeBefore = map1.size();
+
+        // Tenta modificar a cópia (não deve afetar o original)
+        Set<String> fakeSet = new HashSet<>();
+        fakeSet.add("https://fake-link.com");
+        map1.put("https://fake.com", fakeSet);
 
         Map<String, Set<String>> map2 = barrel.getAdjacencyListMap();
-        assertFalse(map2.containsKey("https://fake.com"), "Modificação da cópia não devia afetar o original");
+        assertEquals(sizeBefore, map2.size(), "Modificação da cópia não devia afetar o original");
+        assertFalse(map2.containsKey("https://fake.com"), "URL fake não devia existir no original");
     }
 
     // ========== Testes para getBloomFilterBytes ==========
@@ -291,6 +302,191 @@ public class BarrelTest {
 
         Map<String, PageInfo> pages = barrel.getPagesInfoMap();
         assertEquals(numThreads, pages.size(), "Todas as páginas deviam ter sido adicionadas");
+    }
+
+    // ========== Testes para getInvertedIndexMap ==========
+
+    @Test
+    void getInvertedIndexMap_retorna_indice_correto() throws Exception {
+        PageInfo page1 = new PageInfo("P1", "https://p1.com", List.of("java", "programming"), "s1");
+        PageInfo page2 = new PageInfo("P2", "https://p2.com", List.of("java", "spring"), "s2");
+
+        barrel.addPageInfo(page1);
+        barrel.addPageInfo(page2);
+
+        Map<String, Set<String>> invertedIndex = barrel.getInvertedIndexMap();
+
+        assertTrue(invertedIndex.containsKey("java"), "Palavra 'java' devia estar no índice");
+        assertEquals(2, invertedIndex.get("java").size(), "'java' devia ter 2 URLs");
+        assertTrue(invertedIndex.get("java").contains("https://p1.com"), "p1 devia estar em 'java'");
+        assertTrue(invertedIndex.get("java").contains("https://p2.com"), "p2 devia estar em 'java'");
+    }
+
+    @Test
+    void getInvertedIndexMap_case_insensitive() throws Exception {
+        PageInfo page = new PageInfo("P", "https://p.com", List.of("Java", "PROGRAMMING"), "s");
+
+        barrel.addPageInfo(page);
+
+        Map<String, Set<String>> invertedIndex = barrel.getInvertedIndexMap();
+
+        assertTrue(invertedIndex.containsKey("java"), "Palavra devia estar em lowercase");
+        assertTrue(invertedIndex.containsKey("programming"), "Palavra devia estar em lowercase");
+    }
+
+    // ========== Testes para getExpectedSeqNumber ==========
+
+    @Test
+    void getExpectedSeqNumber_inicialmente_vazio() throws Exception {
+        Map<String, Integer> expected = barrel.getExpectedSeqNumber();
+        assertTrue(expected.isEmpty(), "Expected seq numbers devia estar vazio inicialmente");
+    }
+
+    @Test
+    void getExpectedSeqNumber_atualiza_apos_receiveMessage() throws Exception {
+        String nome = "down-test";
+        PageInfo page = new PageInfo("T", "https://test.com", List.of("test"), "s");
+
+        barrel.receiveMessage(0, page, List.of(), nome);
+
+        Map<String, Integer> expected = barrel.getExpectedSeqNumber();
+        assertTrue(expected.containsKey(nome), "Downloader devia estar no mapa");
+        assertEquals(1, expected.get(nome), "Expected devia ser 1 após receber seq 0");
+    }
+
+    // ========== Testes para getReceivedSeqNumbers ==========
+
+    @Test
+    void getReceivedSeqNumbers_inicialmente_vazio() throws Exception {
+        Map<String, Set<Integer>> received = barrel.getReceivedSeqNumbers();
+        assertTrue(received.isEmpty(), "Received seq numbers devia estar vazio inicialmente");
+    }
+
+    @Test
+    void getReceivedSeqNumbers_regista_mensagens_recebidas() throws Exception {
+        String nome = "down-test";
+        PageInfo page1 = new PageInfo("P1", "https://p1.com", List.of("w1"), "s1");
+        PageInfo page2 = new PageInfo("P2", "https://p2.com", List.of("w2"), "s2");
+
+        barrel.receiveMessage(0, page1, List.of(), nome);
+        barrel.receiveMessage(1, page2, List.of(), nome);
+
+        Map<String, Set<Integer>> received = barrel.getReceivedSeqNumbers();
+        assertTrue(received.containsKey(nome), "Downloader devia estar no mapa");
+        assertTrue(received.get(nome).contains(0), "Devia ter recebido seq 0");
+        assertTrue(received.get(nome).contains(1), "Devia ter recebido seq 1");
+    }
+
+    // ========== Testes para receiveMessage com múltiplos downloaders ==========
+
+    @Test
+    void receiveMessage_multiplos_downloaders_independentes() throws Exception {
+        String down1 = "down-A";
+        String down2 = "down-B";
+
+        PageInfo page1 = new PageInfo("P1", "https://p1.com", List.of("w1"), "s1");
+        PageInfo page2 = new PageInfo("P2", "https://p2.com", List.of("w2"), "s2");
+
+        barrel.receiveMessage(0, page1, List.of(), down1);
+        barrel.receiveMessage(0, page2, List.of(), down2);
+
+        Map<String, Integer> expected = barrel.getExpectedSeqNumber();
+        assertEquals(1, expected.get(down1), "down-A expected devia ser 1");
+        assertEquals(1, expected.get(down2), "down-B expected devia ser 1");
+
+        Map<String, PageInfo> pages = barrel.getPagesInfoMap();
+        assertEquals(2, pages.size(), "Deviam existir 2 páginas de downloaders diferentes");
+    }
+
+    // ========== Testes para ordenação por relevância (adjacências) ==========
+
+    @Test
+    void searchPages_ordena_por_numero_de_adjacencias() throws Exception {
+        // Página p1 tem 3 ligações recebidas
+        PageInfo page1 = new PageInfo("P1", "https://p1.com", List.of("java"), "s1");
+        PageInfo page2 = new PageInfo("P2", "https://p2.com", List.of("java"), "s2");
+        PageInfo page3 = new PageInfo("P3", "https://p3.com", List.of("java"), "s3");
+
+        barrel.addPageInfo(page1);
+        barrel.addPageInfo(page2);
+        barrel.addPageInfo(page3);
+
+        // p1 recebe 3 ligações
+        barrel.addAdjacency("https://other1.com", "https://p1.com");
+        barrel.addAdjacency("https://other2.com", "https://p1.com");
+        barrel.addAdjacency("https://other3.com", "https://p1.com");
+
+        // p2 recebe 1 ligação
+        barrel.addAdjacency("https://other4.com", "https://p2.com");
+
+        List<PageInfo> results = barrel.searchPages(List.of("java"));
+
+        assertEquals(3, results.size(), "Devia encontrar 3 páginas");
+
+        // Verificar que p1 tem mais adjacências que p2
+        Map<String, Set<String>> adj = barrel.getAdjacencyListMap();
+        int p1Links = adj.getOrDefault("https://p1.com", Collections.emptySet()).size();
+        int p2Links = adj.getOrDefault("https://p2.com", Collections.emptySet()).size();
+
+        assertTrue(p1Links > p2Links, "p1 devia ter mais ligações que p2");
+    }
+
+    // ========== Testes para estatísticas e informações do sistema ==========
+
+    @Test
+    void barrel_mantem_estatisticas_corretas() throws Exception {
+        PageInfo page1 = new PageInfo("P1", "https://p1.com", List.of("java", "spring"), "s1");
+        PageInfo page2 = new PageInfo("P2", "https://p2.com", List.of("python", "django"), "s2");
+
+        barrel.addPageInfo(page1);
+        barrel.addPageInfo(page2);
+
+        Map<String, PageInfo> pages = barrel.getPagesInfoMap();
+        Map<String, Set<String>> invertedIndex = barrel.getInvertedIndexMap();
+
+        assertEquals(2, pages.size(), "Devia ter 2 páginas indexadas");
+        assertTrue(invertedIndex.size() >= 4, "Devia ter pelo menos 4 palavras no índice");
+    }
+
+    // ========== Teste para Bloom Filter falso-positivo ==========
+
+    @Test
+    void bloomFilter_permite_falsos_positivos_mas_nao_falsos_negativos() throws Exception {
+        String url = "https://definitivamente-nao-existe.com";
+
+        barrel.addToBloomFilter(url);
+
+        // Após adicionar ao bloom filter, deve indicar que pode existir
+        PageInfo page = new PageInfo("T", url, List.of("test"), "s");
+        barrel.addPageInfo(page);
+
+        // Tentar adicionar à fila (não deve adicionar pois está no bloom filter E em pagesInfo)
+        barrel.addUrlToQueue(url);
+
+        String retrieved = barrel.getUrlFromQueue();
+        assertNull(retrieved, "URL no Bloom filter e pagesInfo não devia ser adicionado");
+    }
+
+    // ========== Teste para indexação recursiva de URLs ==========
+
+    @Test
+    void receiveMessage_adiciona_urls_recursivamente_a_fila() throws Exception {
+        String nome = "down-recursive";
+        PageInfo page = new PageInfo("P1", "https://p1.com", List.of("test"), "s1");
+        List<String> links = List.of("https://link1.com", "https://link2.com", "https://link3.com");
+
+        barrel.receiveMessage(0, page, links, nome);
+
+        // Verificar que os links foram adicionados à fila
+        Set<String> queueUrls = new HashSet<>();
+        String url;
+        while ((url = barrel.getUrlFromQueue()) != null) {
+            queueUrls.add(url);
+        }
+
+        assertTrue(queueUrls.contains("https://link1.com"), "link1 devia estar na fila");
+        assertTrue(queueUrls.contains("https://link2.com"), "link2 devia estar na fila");
+        assertTrue(queueUrls.contains("https://link3.com"), "link3 devia estar na fila");
     }
 
 }
