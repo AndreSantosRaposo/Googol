@@ -1,0 +1,6 @@
+Pcoutro; ipothermachine; null
+Gateway; localhost; port;
+Barrel1; meuip; port;
+Barrel2; outroip; port;
+Downloader1; meuip; port;
+Downloader2; outroip; port;
