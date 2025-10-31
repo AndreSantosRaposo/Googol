@@ -45,24 +45,18 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     @Override
     public void addUrl(String url) throws RemoteException {
         try {
-            //Mudar true false, mesnagem
-            System.out.println("URL enviado para Barrel1: " + url);
-            boolean adicionado = barrel1.addUrlToQueue(url);
+            boolean adicionado1 = barrel1.addUrlToQueue(url);
             if(DebugConfig.DEBUG_URL_INDEXAR){
-                System.out.println("[DEBUG]: URL " + url + (adicionado ? " adicionada" : " não adicionada") + " à fila do Barrel1.");
+                System.out.println("[DEBUG]: URL " + url + (adicionado1 ? " adicionada" : " não adicionada") + " à fila do Barrel1.");
+            }
+
+            boolean adicionado2 = barrel2.addUrlToQueue(url);
+            if(DebugConfig.DEBUG_URL_INDEXAR){
+                System.out.println("[DEBUG]: URL " + url + (adicionado2 ? " adicionada" : " não adicionada") + " à fila do Barrel2.");
             }
 
         } catch (Exception e1) {
-            try {
-                System.out.println("URL enviado para Barrel2: " + url);
-                barrel2.addUrlToQueue(url);
-                if(DebugConfig.DEBUG_URL_INDEXAR){
-                    System.out.println("[DEBUG]: URL " + url + " adicionada à fila do Barrel2.");
-                }
-
-            } catch (Exception e2) {
-                System.err.println("Nenhum Barrel disponível: " + e2.getMessage());
-            }
+                System.err.println("Nenhum Barrel disponível: " + e1.getMessage());
         }
     }
 }

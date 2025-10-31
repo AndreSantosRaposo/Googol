@@ -100,7 +100,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     private void loadFromOtherBarrel(BarrelIndex barrelIndex) throws IOException {
         try {
-            System.out.println("Obtaining info from other barrel...");
+            if(DebugConfig.DEBUG_FICHEIROS || DebugConfig.DEBUG_ALL){
+                System.out.println("[DEBUG]: Loading info from other barrel");
+            }
             // 1. PRIMEIRO: Inicializar MapDB
             db = DBMaker.fileDB(dbPath)
                     .fileMmapEnableIfSupported()
@@ -262,7 +264,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                 addAdjacency(page.getUrl(),link);
                 addUrlToQueue(link);
             }
-            addToBloomFilter(page.getUrl());
 
             // marcar como recebido (mesmo Set guardado no mapa)
             received.add(seqNumber);
@@ -295,7 +296,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
         synchronized (queueLock) {
             urlQueue.add(url);
-
+            addToBloomFilter(url);
             if(DebugConfig.DEBUG_URL_INDEXAR) {
                 System.out.println("[DEBUG]: URL adicionada à fila: " + url);
             }
@@ -341,7 +342,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // Put explícito para garantir persistência no MapDB
             adjacencyList.put(toUrl, adjacencies);
 
-            System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
+            //System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
         }
     }
 
