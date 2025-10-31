@@ -42,21 +42,42 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     /**
      * Adiciona URL para indexação (envia para o primeiro barrel disponível)
      */
-    @Override
     public void addUrl(String url) throws RemoteException {
-        try {
-            boolean adicionado1 = barrel1.addUrlToQueue(url);
-            if(DebugConfig.DEBUG_URL_INDEXAR){
-                System.out.println("[DEBUG]: URL " + url + (adicionado1 ? " adicionada" : " não adicionada") + " à fila do Barrel1.");
-            }
+        boolean algumSucesso = false;
 
-            boolean adicionado2 = barrel2.addUrlToQueue(url);
-            if(DebugConfig.DEBUG_URL_INDEXAR){
-                System.out.println("[DEBUG]: URL " + url + (adicionado2 ? " adicionada" : " não adicionada") + " à fila do Barrel2.");
+        // Tenta adicionar ao Barrel1
+        if (barrel1 != null) {
+            try {
+                boolean adicionado1 = barrel1.addUrlToQueue(url);
+                if (DebugConfig.DEBUG_URL_INDEXAR) {
+                    System.out.println("[DEBUG]: URL " + url + (adicionado1 ? " adicionada" : " não adicionada") + " à fila do Barrel1.");
+                }
+                algumSucesso = adicionado1 || algumSucesso;
+            } catch (Exception e) {
+                System.err.println("Erro ao adicionar ao Barrel1: " + e.getMessage());
             }
+        } else {
+            System.err.println("Barrel1 não disponível");
+        }
 
-        } catch (Exception e1) {
-                System.err.println("Nenhum Barrel disponível: " + e1.getMessage());
+        // Tenta adicionar ao Barrel2
+        if (barrel2 != null) {
+            try {
+                boolean adicionado2 = barrel2.addUrlToQueue(url);
+                if (DebugConfig.DEBUG_URL_INDEXAR) {
+                    System.out.println("[DEBUG]: URL " + url + (adicionado2 ? " adicionada" : " não adicionada") + " à fila do Barrel2.");
+                }
+                algumSucesso = adicionado2 || algumSucesso;
+            } catch (Exception e) {
+                System.err.println("Erro ao adicionar ao Barrel2: " + e.getMessage());
+            }
+        } else {
+            System.err.println("Barrel2 não disponível");
+        }
+
+        // Se nenhum Barrel conseguiu processar
+        if (!algumSucesso) {
+            throw new RemoteException("Nenhum Barrel disponível para indexar: " + url);
         }
     }
 }
