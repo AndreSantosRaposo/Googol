@@ -16,6 +16,7 @@ public class GatewayServer {
             String gatewayIp = gatewayCfg.get(1).trim();
             int gatewayPort = Integer.parseInt(gatewayCfg.get(2).trim());
 
+
             // === Ler configuração dos Barrels ===
             List<String> barrel1Cfg = FileManipulation.lineSplitter(filename, BARREL1_LINE, ";");
             List<String> barrel2Cfg = FileManipulation.lineSplitter(filename, BARREL2_LINE, ";");
@@ -29,12 +30,25 @@ public class GatewayServer {
             String barrel2Name = barrel2Cfg.get(0).trim();
 
             // === Obter referências RMI aos barrels ===
-            Registry reg1 = LocateRegistry.getRegistry(barrel1Ip, barrel1Port);
-            Registry reg2 = LocateRegistry.getRegistry(barrel2Ip, barrel2Port);
+            BarrelIndex barrel1= null;
 
-            BarrelIndex barrel1 = (BarrelIndex) reg1.lookup(barrel1Name);
-            BarrelIndex barrel2 = (BarrelIndex) reg2.lookup(barrel2Name);
+            try {
+                Registry reg1 = LocateRegistry.getRegistry(barrel1Ip, barrel1Port);
+                barrel1 = (BarrelIndex) reg1.lookup(barrel1Name);
+                System.out.println("Barrel 1 Sucesso");
 
+            }catch (Exception e) {
+                System.out.println("Erro ao obter barrel 1");
+            }
+            BarrelIndex barrel2= null;
+            try {
+                Registry reg2 = LocateRegistry.getRegistry(barrel2Ip, barrel2Port);
+                barrel2 = (BarrelIndex) reg2.lookup(barrel2Name);
+                System.out.println("Barrel 2 sucesso");
+
+            }catch(Exception e) {
+                System.out.println("Erro ao obter barrel 2");
+            }
             // === Criar o objeto Gateway ===
             Gateway gateway = new Gateway(barrel1, barrel2);
 

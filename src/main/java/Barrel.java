@@ -175,14 +175,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         adjacencyList = db.hashMap("adjacencyList", Serializer.STRING, Serializer.JAVA).createOrOpen();
         invertedIndex = db.hashMap("invertedIndex", Serializer.STRING, Serializer.JAVA).createOrOpen();
 
-        ConcurrentMap<String, Integer> loadedExpected = db.hashMap("expectedSeqNumbers",
-                Serializer.STRING, Serializer.INTEGER).createOrOpen();
-        expectedSeqNumbers = new ConcurrentHashMap<>(loadedExpected);
-
-        ConcurrentMap<String, Set<Integer>> loadedReceived = db.hashMap("receivedSeqNumbers",
-                Serializer.STRING, Serializer.JAVA).createOrOpen();
-        receivedSeqNumbers = new ConcurrentHashMap<>(loadedReceived);
-
         // Load BloomFilter
         File bloomFile = new File(dbPath + "_bloom.bin");
         if (bloomFile.exists()) {
