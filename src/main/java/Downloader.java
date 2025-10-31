@@ -1,6 +1,5 @@
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
-
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
@@ -12,32 +11,36 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     private HashMap<Integer, HistoryMessage> historyBuffer;
     private int seqNumber;
     private String name;
+    private String ip;
+    private int port;
 
 
-    public Downloader(String name, String ipA, int portA, String nameA,
-                      String ipB, int portB, String nameB) throws RemoteException {
+    public Downloader(String name,String ip ,Integer port,String IpBarrelA, int PortBarrelA, String nameBarrelA,
+                      String IpBarrelB, int PortBarrelB, String nameBarrelB) throws RemoteException {
         super();
         this.name = name;
+        this.ip= ip;
+        this.port = port;
         this.historyBuffer = new HashMap<>();
         this.seqNumber = 0;
         this.barrels = new ArrayList<>();
 
         try {
-            Registry regA = LocateRegistry.getRegistry(ipA, portA);
-            BarrelIndex barrel1 = (BarrelIndex) regA.lookup(nameA);
+            Registry regA = LocateRegistry.getRegistry(IpBarrelA, PortBarrelA);
+            BarrelIndex barrel1 = (BarrelIndex) regA.lookup(nameBarrelA);
             barrels.add(barrel1);
-            System.out.println(" Ligado ao barrel : " + nameA);
+            System.out.println(" Ligado ao barrel : " + nameBarrelA);
         } catch (Exception e) {
-            System.err.println(" Erro ao ligar ao " + nameA + " " + e.getMessage());
+            System.err.println(" Erro ao ligar ao " + nameBarrelA + " " + e.getMessage());
         }
 
         try {
-            Registry regB = LocateRegistry.getRegistry(ipB, portB);
-            BarrelIndex barrel2 = (BarrelIndex) regB.lookup(nameB);
+            Registry regB = LocateRegistry.getRegistry(IpBarrelB, PortBarrelB);
+            BarrelIndex barrel2 = (BarrelIndex) regB.lookup(nameBarrelB);
             barrels.add(barrel2);
-            System.out.println(" Ligado ao barrel : " + nameA);
+            System.out.println(" Ligado ao barrel : " + nameBarrelB);
         } catch (Exception e) {
-            System.err.println(" Erro ao ligar ao " + nameA + " " + e.getMessage());
+            System.err.println(" Erro ao ligar ao " + nameBarrelA + " " + e.getMessage());
         }
 
     }
@@ -71,7 +74,7 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
         System.out.println("Reenviando mensagem com seqNumber: " + seqNumber + " ao barrel que solicitou.");
 
         try {
-            requestingBarrel.receiveMessage(seqNumber, message.getPage(), message.getUrls(), name);
+            requestingBarrel.receiveMessage(seqNumber, message.getPage(), message.getUrls(), name, ip, port);
             System.out.println("Mensagem reenviada com sucesso ao Barrel solicitante.");
         } catch (Exception e) {
             System.err.println("Erro ao reenviar dados ao Barrel: " + e.getMessage());
@@ -98,7 +101,7 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
 
             for (BarrelIndex barrel : barrels) {
                 try {
-                    barrel.receiveMessage(currentSeq, pageInformation, hrefs, name);
+                    barrel.receiveMessage(currentSeq, pageInformation, hrefs, name, ip, port);
                     System.out.println("Página enviada com seq=" + currentSeq + " ao Barrel remoto.");
                 } catch (Exception e) {
                     System.err.println("Erro ao enviar ao Barrel: " + e.getMessage());

@@ -21,7 +21,7 @@ public interface BarrelIndex extends Remote {
     ConcurrentMap<String, Integer> getExpectedSeqNumber() throws RemoteException;
     ConcurrentMap<String, Set<Integer>> getReceivedSeqNumbers() throws RemoteException;
 
-    void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException;
+    void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String io, Integer port) throws RemoteException;
 
     // Pesquisa remota
     List<PageInfo> searchPages(List<String> terms) throws RemoteException;

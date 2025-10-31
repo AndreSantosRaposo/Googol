@@ -185,7 +185,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         System.out.println("Info saved to MapDB.");
     }
 
-    public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome) throws RemoteException {
+    public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
         synchronized (messageLock){
             // garantir estruturas para o remetente
             Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
@@ -198,7 +198,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             }
 
             // detetar lacunas antes de qualquer retorno
-            checkForMissingMessages(seqNumber, nome);
+            checkForMissingMessages(seqNumber, nome, ip,port);
 
             // aplicar efeitos
             addPageInfo(page);
@@ -425,7 +425,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
-    private void checkForMissingMessages(int receivedSeqNumber, String nome) {
+    private void checkForMissingMessages(int receivedSeqNumber, String nome, String ip, Integer port) {
         int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
         Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
 
@@ -436,15 +436,17 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // Pedir reenvio de todas as mensagens em falta
             for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
                 if (!receivedSeqNumbers.get(nome).contains(missing)) {
-                    requestMissingMessage(missing,nome);
+                    requestMissingMessage(missing,nome,ip,port);
                 }
             }
         }
     }
 
-    private void requestMissingMessage(int missingSeqNumber, String nome) {
+    private void requestMissingMessage(int missingSeqNumber, String nome, String ip, Integer port) {
         try {
-            Registry reg = LocateRegistry.getRegistry(); // host/port por omissão; ajuste se necessário
+            System.setProperty("java.rmi.server.hostname", ip);
+            /*Nao sei se é preciso*/
+            Registry reg = LocateRegistry.getRegistry(port); // host/port por omissão; ajuste se necessário
             DownloaderIndex downloader = (DownloaderIndex) reg.lookup(nome);
 
             if (downloader == null) {

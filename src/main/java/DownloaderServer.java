@@ -32,7 +32,7 @@ public class DownloaderServer {
 
             // Criar instância do Downloader
             Downloader downloader = new Downloader(
-                    downloaderName,
+                    downloaderName, downloaderIp, downloaderPort,
                     barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()), barrel1Config.get(0).trim(),
                     barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()), barrel2Config.get(0).trim()
             );

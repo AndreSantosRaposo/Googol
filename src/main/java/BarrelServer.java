@@ -6,13 +6,9 @@ import java.util.List;
 public class BarrelServer {
     public static void main(String[] args) {
         String filename = "config.txt";
-        final int CONFIG_LINE_INDEX = 2; // altera conforme o barrel
+        final int CONFIG_LINE_INDEX = 2;
 
         try {
-            // **ADICIONAR ESTAS LINHAS ANTES DE QUALQUER CÓDIGO RMI:**
-            String barrelIp = "192.84.13.8"; // ou obter do config.txt
-            System.setProperty("java.rmi.server.hostname", barrelIp);
-            System.out.println("[BarrelServer] RMI hostname configurado para: " + barrelIp);
 
             List<String> parts = FileManipulation.lineSplitter(filename, CONFIG_LINE_INDEX, ";");
 
