@@ -7,64 +7,97 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
-    private final List<BarrelIndex> barrels;
     private HashMap<Integer, HistoryMessage> historyBuffer;
     private int seqNumber;
     private String name;
     private String ip;
     private int port;
+    private int currentBarrel = 1; // Para round-robin
 
+    // HashMap escalável: nome -> [ip, porta, conexão]
+    private HashMap<String, Object[]> barrels;
 
-    public Downloader(String name,String ip ,Integer port,String IpBarrelA, int PortBarrelA, String nameBarrelA,
+    public Downloader(String name, String ip, Integer port,
+                      String IpBarrelA, int PortBarrelA, String nameBarrelA,
                       String IpBarrelB, int PortBarrelB, String nameBarrelB) throws RemoteException {
         super();
         this.name = name;
-        this.ip= ip;
+        this.ip = ip;
         this.port = port;
         this.historyBuffer = new HashMap<>();
         this.seqNumber = 0;
-        this.barrels = new ArrayList<>();
+        this.barrels = new HashMap<>();
+
+        // Adicionar barrels: [ip, porta, conexão]
+        barrels.put(nameBarrelA, new Object[]{IpBarrelA, PortBarrelA, null});
+        barrels.put(nameBarrelB, new Object[]{IpBarrelB, PortBarrelB, null});
+
+        // Tentar conexão inicial
+        connectToBarrel(nameBarrelA);
+        connectToBarrel(nameBarrelB);
+    }
+
+    public synchronized void connectToBarrel(String barrelName) {
+        Object[] info = barrels.get(barrelName);
+        if (info == null || info[2] != null) return;
 
         try {
-            Registry regA = LocateRegistry.getRegistry(IpBarrelA, PortBarrelA);
-            BarrelIndex barrel1 = (BarrelIndex) regA.lookup(nameBarrelA);
-            barrels.add(barrel1);
-
-            System.out.println(" Ligado ao barrel : " + nameBarrelA + " IP: " + IpBarrelA + " PORTA: " + PortBarrelA);
+            Registry reg = LocateRegistry.getRegistry((String) info[0], (int) info[1]);
+            info[2] = (BarrelIndex) reg.lookup(barrelName);
+            System.out.println("[Downloader] Conectado ao: " + barrelName + " IP: " + info[0] + " PORTA: " + info[1]);
         } catch (Exception e) {
-            System.err.println(" Erro ao ligar ao " + nameBarrelA + " " + e.getMessage());
+            System.out.println("[Downloader] " + barrelName + " ainda não disponível: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public synchronized void notifyBarrelUp(String barrelName) throws RemoteException {
+        System.out.println("[Downloader] Recebida notificação: " + barrelName + " está UP");
+        connectToBarrel(barrelName);
+    }
+
+    public void processNextUrl() throws Exception {
+        BarrelIndex targetBarrel = null;
+        List<BarrelIndex> activeBarrels = getActiveBarrels();
+
+        // Se não há barrels ativos
+        if (activeBarrels.isEmpty()) {
+            System.err.println(" Nenhum Barrel disponível! A aguardar 5 segundos...");
+            Thread.sleep(5000);
+            return;
         }
 
-        try {
-            Registry regB = LocateRegistry.getRegistry(IpBarrelB, PortBarrelB);
-            BarrelIndex barrel2 = (BarrelIndex) regB.lookup(nameBarrelB);
-            barrels.add(barrel2);
+        // Round-robin simples
+        int index = (currentBarrel++) % activeBarrels.size();
+        targetBarrel = activeBarrels.get(index);
 
-            System.out.println(" Ligado ao barrel : " + nameBarrelB + " IP: " + IpBarrelB + " PORTA: " + PortBarrelB);
-        } catch (Exception e) {
-            System.err.println(" Erro ao ligar ao " + nameBarrelB + " " + e.getMessage());
+        // Pede um URL à fila do Barrel atual
+        String nextUrl = targetBarrel.getUrlFromQueue();
+
+        if (nextUrl != null && !nextUrl.isEmpty()) {
+            scrapURL(nextUrl);
         }
-
     }
 
-    // Construtor auxiliar só para testes (não abre RMI)
-    Downloader(String nome, List<BarrelIndex> barrels) throws RemoteException {
-        this.name = nome;
-        this.barrels = barrels;
-        this.historyBuffer = new HashMap<>();
-        this.seqNumber = 0;
-
+    private synchronized List<BarrelIndex> getActiveBarrels() {
+        List<BarrelIndex> active = new ArrayList<>();
+        for (Object[] info : barrels.values()) {
+            if (info[2] != null) {
+                active.add((BarrelIndex) info[2]);
+            }
+        }
+        return active;
     }
 
-    // Helper de teste para povoar o histórico
-    void addToHistory(int seq, HistoryMessage msg) {
-        historyBuffer.put(seq, msg);
+    private synchronized void disconnectBarrel(BarrelIndex barrel) {
+        for (Object[] info : barrels.values()) {
+            if (info[2] == barrel) {
+                info[2] = null;
+                break;
+            }
+        }
     }
 
-    /**
-     * Method that resends lost messages detected by barrels
-     * @param seqNumber
-     */
     public void reSendMessages(int seqNumber, BarrelIndex requestingBarrel) throws RemoteException {
         HistoryMessage message = historyBuffer.get(seqNumber);
 
@@ -97,11 +130,12 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
                     .stream().map(link -> link.attr("abs:href"))
                     .filter(link -> !link.isEmpty()).toList();
 
-            // gerar seq, guardar no histórico e enviar com seqNumber
             int currentSeq = seqNumber++;
             historyBuffer.put(currentSeq, new HistoryMessage(pageInformation, hrefs));
 
-            for (BarrelIndex barrel : barrels) {
+            List<BarrelIndex> activeBarrels = getActiveBarrels();
+
+            for (BarrelIndex barrel : activeBarrels) {
                 try {
                     barrel.receiveMessage(currentSeq, pageInformation, hrefs, name, ip, port);
                     if (DebugConfig.DEBUG_DOWNLOADER || DebugConfig.DEBUG_ALL) {
@@ -109,12 +143,22 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
                     }
                 } catch (Exception e) {
                     System.err.println("Erro ao enviar ao Barrel: " + e.getMessage());
+                    disconnectBarrel(barrel);
                 }
             }
         } catch (Exception e) {
             System.out.println("Erro ao processar URL: " + e.getMessage());
         }
     }
+
+    Downloader(String nome, HashMap<String, Object[]> barrels) throws RemoteException {
+        this.name = nome;
+        this.barrels = barrels;
+        this.historyBuffer = new HashMap<>();
+        this.seqNumber = 0;
+    }
+
+    void addToHistory(int seq, HistoryMessage msg) {
+        historyBuffer.put(seq, msg);
+    }
 }
-
-

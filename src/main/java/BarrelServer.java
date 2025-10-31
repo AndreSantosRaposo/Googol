@@ -32,7 +32,11 @@ public class BarrelServer {
             // Registar o objeto remoto
             registry.rebind(barrelName, barrel);
 
+
             System.out.println("[BarrelServer] '" + barrelName + "' registado e acessível em " + ip + ":" + port);
+
+            // Notificar o Downloader que o Barrel está UP
+            notifyDownloader(filename, barrelName);
 
         } catch (FileNotFoundException e) {
             System.err.println("Erro: ficheiro '" + filename + "' não encontrado!");
@@ -43,4 +47,29 @@ public class BarrelServer {
             e.printStackTrace();
         }
     }
+
+    private static void notifyDownloader(String filename, String barrelName) {
+        try {
+            List<String> downloaderConfig = FileManipulation.lineSplitter(filename, 4, ";");
+
+            if (downloaderConfig.size() < 3) {
+                System.err.println("[BarrelServer] Configuração do Downloader incompleta");
+                return;
+            }
+
+            String downloaderName = downloaderConfig.get(0).trim();
+            String downloaderIp = downloaderConfig.get(1).trim();
+            int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
+
+            Registry downloaderRegistry = LocateRegistry.getRegistry(downloaderIp, downloaderPort);
+            DownloaderIndex downloader = (DownloaderIndex) downloaderRegistry.lookup(downloaderName);
+
+            downloader.notifyBarrelUp(barrelName);
+            System.out.println("[BarrelServer] Downloader notificado: " + barrelName + " está UP");
+
+        } catch (Exception e) {
+            System.out.println("[BarrelServer] Não foi possível notificar o Downloader: " + e.getMessage());
+        }
+    }
+
 }
