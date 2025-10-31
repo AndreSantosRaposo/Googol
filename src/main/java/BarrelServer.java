@@ -9,7 +9,6 @@ public class BarrelServer {
         final int CONFIG_LINE_INDEX = 2;
 
         try {
-
             List<String> parts = FileManipulation.lineSplitter(filename, CONFIG_LINE_INDEX, ";");
 
             if (parts.size() < 3) {
@@ -32,11 +31,10 @@ public class BarrelServer {
             // Registar o objeto remoto
             registry.rebind(barrelName, barrel);
 
-
             System.out.println("[BarrelServer] '" + barrelName + "' registado e acessível em " + ip + ":" + port);
 
-            // Notificar o Downloader que o Barrel está UP
-            notifyDownloader(filename, barrelName);
+            // Notificar TODOS os Downloaders que o Barrel está UP
+            notifyAllDownloaders(filename, barrelName);
 
         } catch (FileNotFoundException e) {
             System.err.println("Erro: ficheiro '" + filename + "' não encontrado!");
@@ -48,28 +46,32 @@ public class BarrelServer {
         }
     }
 
-    private static void notifyDownloader(String filename, String barrelName) {
-        try {
-            List<String> downloaderConfig = FileManipulation.lineSplitter(filename, 4, ";");
+    private static void notifyAllDownloaders(String filename, String barrelName) {
+        // Assumindo que os Downloaders estão nas linhas 4 e 5 do config.txt
+        int[] downloaderLines = {4, 5}; // Ajuste conforme necessário
 
-            if (downloaderConfig.size() < 3) {
-                System.err.println("[BarrelServer] Configuração do Downloader incompleta");
-                return;
+        for (int lineIndex : downloaderLines) {
+            try {
+                List<String> downloaderConfig = FileManipulation.lineSplitter(filename, lineIndex, ";");
+
+                if (downloaderConfig.size() < 3) {
+                    System.err.println("[BarrelServer] Configuração do Downloader na linha " + (lineIndex + 1) + " incompleta");
+                    continue;
+                }
+
+                String downloaderName = downloaderConfig.get(0).trim();
+                String downloaderIp = downloaderConfig.get(1).trim();
+                int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
+
+                Registry downloaderRegistry = LocateRegistry.getRegistry(downloaderIp, downloaderPort);
+                DownloaderIndex downloader = (DownloaderIndex) downloaderRegistry.lookup(downloaderName);
+
+                downloader.notifyBarrelUp(barrelName);
+                System.out.println("[BarrelServer] Downloader '" + downloaderName + "' notificado: " + barrelName + " está UP");
+
+            } catch (Exception e) {
+                System.out.println("[BarrelServer] Não foi possível notificar o Downloader na linha " + (lineIndex + 1) + ": " + e.getMessage());
             }
-
-            String downloaderName = downloaderConfig.get(0).trim();
-            String downloaderIp = downloaderConfig.get(1).trim();
-            int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
-
-            Registry downloaderRegistry = LocateRegistry.getRegistry(downloaderIp, downloaderPort);
-            DownloaderIndex downloader = (DownloaderIndex) downloaderRegistry.lookup(downloaderName);
-
-            downloader.notifyBarrelUp(barrelName);
-            System.out.println("[BarrelServer] Downloader notificado: " + barrelName + " está UP");
-
-        } catch (Exception e) {
-            System.out.println("[BarrelServer] Não foi possível notificar o Downloader: " + e.getMessage());
         }
     }
-
 }
