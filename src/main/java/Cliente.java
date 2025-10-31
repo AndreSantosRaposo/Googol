@@ -10,6 +10,7 @@ public class Cliente {
             PageInfo p = results.get(LimMin);
             System.out.printf("- %s (%s) citação: %s\n",
                     p.getTitle(), p.getUrl(), p.getSmallText());
+            LimMin++;
 
         }
     }
@@ -51,7 +52,6 @@ public class Cliente {
                 System.out.print("Escolha: ");
 
                 int opcao;
-                String opcaoString;
                 try {
                     opcao = Integer.parseInt(sc.nextLine());
                 } catch (NumberFormatException e) {
@@ -75,30 +75,41 @@ public class Cliente {
 
                     try {
                         List<PageInfo> results = gateway.search(query);
-                        System.out.println("Resultados:");
                         if (results.isEmpty()) {
                             System.out.println("(Nenhum resultado encontrado)");
-                        } else {
-                            dezLinks( LimMax,  LimMin, results);
-
+                            continue;
                         }
-                        Boolean temp=true;
-                        while (temp) {
-                        System.out.println("Deseja ver proximos 10 links?");
-                        opcaoString = sc.nextLine();
-                        if (opcaoString.equalsIgnoreCase("s")) {
-                            if(LimMax+10< results.size()){
-                                dezLinks(results.size()-LimMax, LimMin+10, results);
-                                System.out.println("Acabaram os links");
-                                temp=false;
-                            }else {
-                                dezLinks(LimMax + 10, LimMin + 10, results);
+
+                        System.out.println("Resultados:");
+                        int limMin = 0;
+                        int limMax = 10;
+
+                        // mostra a primeira página
+                        dezLinks(limMax, limMin, results);
+
+                        // paginação
+                        while (limMax < results.size()) {
+                            System.out.print("\nDeseja ver os próximos 10 links? (s/n): ");
+                            String opcaoString = sc.nextLine().trim().toLowerCase();
+
+                            if (opcaoString.equals("s")) {
+                                limMin = limMax;
+                                limMax = Math.min(limMax + 10, results.size());
+                                dezLinks(limMax, limMin, results);
+
+                                if (limMax >= results.size()) {
+                                    System.out.println("Acabaram os links.");
+                                    break;
+                                }
+
+                            } else if (opcaoString.equals("n")) {
+                                break;
+                            } else {
+                                System.out.println("Opção inválida. Digite 's' ou 'n'.");
                             }
-                        }else if (opcaoString.equalsIgnoreCase("n")) {
-                            temp=false;
                         }
 
-                    } }catch (Exception e) {
+                    } catch (Exception e) {
                         System.err.println("Erro ao pesquisar: " + e.getMessage());
                     }
 
