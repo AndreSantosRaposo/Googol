@@ -256,11 +256,14 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
             // aplicar efeitos
             addPageInfo(page);
+            Integer i=0;
             for (String link : urls) {
+                while(i<10){
                 if (DebugConfig.DEBUG_URL) {
                     System.out.println("[DEBUG]Scraping link: " + link);
+                    i++;
 
-                }
+                }}
                 addAdjacency(page.getUrl(),link);
                 addUrlToQueue(link);
             }
