@@ -67,6 +67,7 @@ public class DownloaderServer {
 
                     if (nextUrl != null && !nextUrl.isEmpty()) {
                         downloader.scrapURL(nextUrl); // envia resultados a ambos os barrels
+                        Thread.sleep(3000);
                     } else {
                         Thread.sleep(3000);
                     }

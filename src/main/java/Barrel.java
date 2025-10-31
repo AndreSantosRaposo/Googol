@@ -61,6 +61,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
         askForInfo();
         semaforo = 1;
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("🛑 Shutdown detetado...");
+            //shutdown();
+        }));
     }
 
     private void askForInfo() throws IOException {
@@ -274,6 +279,17 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             expectedSeqNumbers.put(nome, e);
 
             System.out.println("Mensagem aplicada com seqNumber: " + seqNumber + " (expected agora=" + e + ")");
+        }
+    }
+
+    public void shutdown() {
+        try {
+            saveInfo();
+            db.commit();
+            db.close();
+            System.out.println("Barrel encerrado com sucesso");
+        } catch (Exception e) {
+            System.err.println("Erro ao encerrar Barrel: " + e.getMessage());
         }
     }
 
