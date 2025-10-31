@@ -6,7 +6,7 @@ public class DownloaderServer {
 
     public static void main(String[] args) {
         final String CONFIG_FILE = "config.txt";
-        final int DOWNLOADER_LINE_INDEX = 4; // linha do Downloader1
+        final int DOWNLOADER_LINE_INDEX = 4; // linha do Downloader local
 
         try {
             // Ler configuração do Downloader
