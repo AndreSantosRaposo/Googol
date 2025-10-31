@@ -58,22 +58,39 @@ public class DownloaderServer {
 
             while (true) {
                 try {
-                    BarrelIndex targetBarrel;
+                    BarrelIndex targetBarrel = null;
 
-                    // Round robin entre os dois Barrels
+                    // Tenta selecionar um Barrel disponível (com round-robin)
                     if (currentBarrel == 0) {
-                        targetBarrel = barrel1;
+                        if (barrel1 != null) {
+                            targetBarrel = barrel1;
+                        } else if (barrel2 != null) {
+                            targetBarrel = barrel2;
+                            System.out.println(" Barrel1 indisponível, a usar Barrel2");
+                        }
                         currentBarrel = 1;
                     } else {
-                        targetBarrel = barrel2;
+                        if (barrel2 != null) {
+                            targetBarrel = barrel2;
+                        } else if (barrel1 != null) {
+                            targetBarrel = barrel1;
+                            System.out.println(" Barrel2 indisponível, a usar Barrel1");
+                        }
                         currentBarrel = 0;
+                    }
+
+                    // Se nenhum Barrel está disponível
+                    if (targetBarrel == null) {
+                        System.err.println(" Nenhum Barrel disponível! A aguardar 5 segundos...");
+                        Thread.sleep(5000);
+                        continue;
                     }
 
                     // Pede um URL à fila do Barrel atual
                     String nextUrl = targetBarrel.getUrlFromQueue();
 
                     if (nextUrl != null && !nextUrl.isEmpty()) {
-                        downloader.scrapURL(nextUrl); // envia resultados a ambos os barrels
+                        downloader.scrapURL(nextUrl);
                         Thread.sleep(3000);
                     } else {
                         Thread.sleep(3000);

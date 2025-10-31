@@ -8,8 +8,8 @@ public class Cliente {
     public static void main(String[] args) {
 
         String filename = "config.txt";
-        final int CLIENTE_LINE = 6;  // linha do cliente
-        final int GATEWAY_LINE = 1;  // linha do gateway
+        final int CLIENTE_LINE = 6;
+        final int GATEWAY_LINE = 1;
 
         try {
             // === Ler config do cliente ===
@@ -30,7 +30,7 @@ public class Cliente {
 
             System.out.printf("Cliente '%s' ligado ao Gateway em %s:%d%n", clienteName, gatewayIp, gatewayPort);
 
-            // === Interface de texto simples ===
+            // === Interface de texto com validações ===
             Scanner sc = new Scanner(System.in);
             while (true) {
                 System.out.println("\n--- MENU CLIENTE ---");
@@ -38,33 +38,75 @@ public class Cliente {
                 System.out.println("2. Adicionar URL");
                 System.out.println("3. Sair");
                 System.out.print("Escolha: ");
-                int opcao = Integer.parseInt(sc.nextLine());
+
+                int opcao;
+                try {
+                    opcao = Integer.parseInt(sc.nextLine());
+                } catch (NumberFormatException e) {
+                    System.err.println("Erro: Insira um número válido (1-3). Tente novamente.");
+                    continue;
+                }
+
+                if (opcao < 1 || opcao > 3) {
+                    System.err.println("Erro: Opção fora do intervalo (1-3). Tente novamente.");
+                    continue;
+                }
 
                 if (opcao == 1) {
                     System.out.print("Digite termos de pesquisa: ");
-                    String query = sc.nextLine();
-                    List<PageInfo> results = gateway.search(query);
-                    System.out.println("Resultados:");
-                    for (PageInfo p : results) {
-                        System.out.printf("- %s (%s) citação: %s\n", p.getTitle(), p.getUrl(), p.getSmallText());
+                    String query = sc.nextLine().trim();
+
+                    if (query.isEmpty()) {
+                        System.err.println("Erro: A pesquisa não pode estar vazia. Tente novamente.");
+                        continue;
+                    }
+
+                    try {
+                        List<PageInfo> results = gateway.search(query);
+                        System.out.println("Resultados:");
+                        if (results.isEmpty()) {
+                            System.out.println("(Nenhum resultado encontrado)");
+                        } else {
+                            for (PageInfo p : results) {
+                                System.out.printf("- %s (%s) citação: %s\n",
+                                        p.getTitle(), p.getUrl(), p.getSmallText());
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Erro ao pesquisar: " + e.getMessage());
                     }
 
                 } else if (opcao == 2) {
                     System.out.print("Digite a URL: ");
-                    String url = sc.nextLine();
-                    //==========================DEBUG=============================
-                    if(DebugConfig.DEBUG_URL_INDEXAR){
-                        System.out.println("[DEBUG]: A adicionar URL " + url + " para indexação.");
+                    String url = sc.nextLine().trim();
+
+                    if (url.isEmpty()) {
+                        System.err.println("⚠️ Erro: A URL não pode estar vazia. Tente novamente.");
+                        continue;
                     }
-                    gateway.addUrl(url);
+
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        System.err.println("⚠️ Aviso: A URL deve começar com 'http://' ou 'https://'. Tente novamente.");
+                        continue;
+                    }
+
+                    try {
+                        if (DebugConfig.DEBUG_URL_INDEXAR) {
+                            System.out.println("[DEBUG]: A adicionar URL " + url + " para indexação.");
+                        }
+                        gateway.addUrl(url);
+                        System.out.println("URL adicionada com sucesso!");
+                    } catch (Exception e) {
+                        System.err.println("Erro ao adicionar URL: " + e.getMessage());
+                    }
 
                 } else if (opcao == 3) {
                     System.out.println("A sair...");
                     break;
-                } else {
-                    System.out.println("Opção inválida.");
                 }
             }
+
+            sc.close();
 
         } catch (Exception e) {
             System.err.println("Erro ao iniciar Cliente: " + e.getMessage());
