@@ -313,7 +313,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     public void addPageInfo(PageInfo pageInfo) throws RemoteException {
         synchronized (pageInfoLock) {
             pagesInfo.put(pageInfo.getUrl(), pageInfo);
-            System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
+           // System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
         }
 
         // Atualizar índice invertido com as palavras desta página
