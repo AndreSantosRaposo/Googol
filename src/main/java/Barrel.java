@@ -341,7 +341,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // Put explícito para garantir persistência no MapDB
             adjacencyList.put(toUrl, adjacencies);
 
-            System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
+           // System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
         }
     }
 
