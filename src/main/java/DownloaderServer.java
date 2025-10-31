@@ -1,34 +1,46 @@
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.List;
 
 public class DownloaderServer {
     public static void main(String[] args) {
+        final String CONFIG_FILE = "config.txt";
+        final int DOWNLOADER_LINE_INDEX = 4; // linha do Downloader local
+
         try {
-            // Configurações dos Barrels
-            String nameBarrelA = "Barrel1";
-            String IpBarrelA = "10.196.247.138";
-            int PortBarrelA = 1099;
+            // Ler configuração do Downloader
+            List<String> downloaderConfig = FileManipulation.lineSplitter(CONFIG_FILE, DOWNLOADER_LINE_INDEX, ";");
 
-            String nameBarrelB = "Barrel2";
-            String IpBarrelB = "10.196.247.181";
-            int PortBarrelB = 1100;
+            if (downloaderConfig.size() < 3) {
+                System.err.println("Linha " + (DOWNLOADER_LINE_INDEX + 1) + " incompleta no ficheiro de configuração.");
+                return;
+            }
 
-            // Configurações do Downloader
-            String downName = "Downloader2";
-            String downIp = "10.196.247.181";
-            Integer downPort = 1102;
+            String downloaderName = downloaderConfig.get(0).trim();
+            String downloaderIp = downloaderConfig.get(1).trim();
+            int downloaderPort = Integer.parseInt(downloaderConfig.get(2).trim());
 
-            System.out.println(" [" + downName + ", " + downIp + ", " + downPort + "]");
-            System.out.println(" [" + nameBarrelB + ", " + IpBarrelB + ", " + PortBarrelB + "]");
-            System.out.println(" [" + nameBarrelA + ", " + IpBarrelA + ", " + PortBarrelA + "]");
+            System.setProperty("java.rmi.server.hostname", downloaderIp);
 
-            // Criar e registrar o Downloader
-            Downloader downloader = new Downloader(downName, downIp, downPort,
-                    IpBarrelA, PortBarrelA, nameBarrelA,
-                    IpBarrelB, PortBarrelB, nameBarrelB);
+            // Ler configuração dos dois Barrels
+            List<String> barrel1Config = FileManipulation.lineSplitter(CONFIG_FILE, 2, ";");
+            List<String> barrel2Config = FileManipulation.lineSplitter(CONFIG_FILE, 3, ";");
 
-            Registry r = LocateRegistry.createRegistry(downPort);
-            r.rebind(downName, downloader);
+
+            // Criar instância do Downloader
+            Downloader downloader = new Downloader(
+                    downloaderName, downloaderIp, downloaderPort,
+                    barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()), barrel1Config.get(0).trim(),
+                    barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()), barrel2Config.get(0).trim()
+            );
+
+            // Registar Gateway
+            try {
+                LocateRegistry.createRegistry(downloaderPort);
+            } catch (Exception ignored) {}
+
+            Registry registry = LocateRegistry.getRegistry(downloaderIp, downloaderPort);
+            registry.rebind(downloaderName, downloader);
 
             // Ciclo principal simplificado
             while (true) {
