@@ -64,7 +64,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("🛑 Shutdown detetado...");
-            //shutdown();
+            shutdown();
         }));
     }
 
@@ -111,7 +111,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // 1. PRIMEIRO: Inicializar MapDB
             db = DBMaker.fileDB(dbPath)
                     .fileMmapEnableIfSupported()
-                    .closeOnJvmShutdown()
                     .transactionEnable()
                     .make();
 
@@ -167,7 +166,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
         db = DBMaker.fileDB(dbPath)
                 .fileMmapEnableIfSupported()
-                .closeOnJvmShutdown()
                 .transactionEnable()
                 .make();
 
@@ -279,10 +277,12 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     public void shutdown() {
         try {
-            saveInfo();
-            db.commit();
-            db.close();
-            System.out.println("Barrel encerrado com sucesso");
+            if (db != null && !db.isClosed()) {
+                saveInfo();
+                db.commit();
+                db.close();
+                System.out.println("Barrel encerrado com sucesso");
+            }
         } catch (Exception e) {
             System.err.println("Erro ao encerrar Barrel: " + e.getMessage());
         }
@@ -539,7 +539,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     public static void main(String[] args) throws RemoteException, Exception {
-        String dbPath = "barrelMapDB.db";
+        String dbPath = "Barrel2_MapDB.db";
 
         Barrel barrel = new Barrel(dbPath,"ahhhh");
 
