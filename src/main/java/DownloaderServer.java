@@ -39,13 +39,20 @@ public class DownloaderServer {
 
             // Registar o Downloader no registry local
             registry.rebind(downloaderName, downloader);
-
-            Registry regBarrel1 = LocateRegistry.getRegistry(barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()));
-            Registry regBarrel2 = LocateRegistry.getRegistry(barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()));
-
-            BarrelIndex barrel1 = (BarrelIndex) regBarrel1.lookup(barrel1Config.get(0).trim());
-            BarrelIndex barrel2 = (BarrelIndex) regBarrel2.lookup(barrel2Config.get(0).trim());
-
+            BarrelIndex barrel1=null;
+            BarrelIndex barrel2=null;
+            try {
+                Registry regBarrel1 = LocateRegistry.getRegistry(barrel1Config.get(1).trim(), Integer.parseInt(barrel1Config.get(2).trim()));
+                barrel1 = (BarrelIndex) regBarrel1.lookup(barrel1Config.get(0).trim());
+            }catch (Exception e) {
+                System.out.println("Erro ao obter o registro de barrel 1: " + e.getMessage());
+            }
+            try {
+                Registry regBarrel2 = LocateRegistry.getRegistry(barrel2Config.get(1).trim(), Integer.parseInt(barrel2Config.get(2).trim()));
+                barrel2 = (BarrelIndex) regBarrel2.lookup(barrel2Config.get(0).trim());
+            }catch (Exception e){
+                System.out.println("Erro ao obter o registro de barrel 2: " + e.getMessage());
+            }
             // Ciclo principal
             int currentBarrel = 0;
 
