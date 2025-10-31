@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Cliente {
+
     public static void main(String[] args) {
+
         String filename = "config.txt";
         final int CLIENTE_LINE = 6;  // linha do cliente
         final int GATEWAY_LINE = 1;  // linha do gateway
@@ -50,6 +52,10 @@ public class Cliente {
                 } else if (opcao == 2) {
                     System.out.print("Digite a URL: ");
                     String url = sc.nextLine();
+                    //==========================DEBUG=============================
+                    if(DebugConfig.DEBUG_URL_INDEXAR){
+                        System.out.println("[DEBUG]: A adicionar URL " + url + " para indexação.");
+                    }
                     gateway.addUrl(url);
 
                 } else if (opcao == 3) {

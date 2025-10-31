@@ -81,10 +81,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             int otherPort = Integer.parseInt(parts.get(2).trim());
 
             Registry registry = LocateRegistry.getRegistry(otherIp, otherPort);
-            System.out.println("✅ [DEBUG] Registry obtido com sucesso");
+            System.out.println("Registry obtido com sucesso");
 
             BarrelIndex otherBarrel = (BarrelIndex) registry.lookup(otherName);
-            System.out.println("✅ [DEBUG] Lookup bem-sucedido! Outro Barrel encontrado: " + otherName);
+            System.out.println("Lookup bem-sucedido! Outro Barrel encontrado: " + otherName);
 
             if (otherBarrel != null) {
                 loadFromOtherBarrel(otherBarrel);
@@ -128,6 +128,17 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                 System.out.println("Bloom filter loaded from other barrel.");
             }
 
+            if (DebugConfig.DEBUG_FICHEIROS) {
+                System.out.println("=================== [DEBUG] ===================");
+                System.out.println("PagesInfo loaded: " + pagesInfo.size());
+                System.out.println("AdjacencyList loaded: " + adjacencyList.size());
+                System.out.println("InvertedIndex loaded: " + invertedIndex.size());
+                System.out.println("ExpectedSeqNumbers loaded: " + expectedSeqNumbers.size());
+                System.out.println("ReceivedSeqNumbers loaded: " + receivedSeqNumbers.size());
+                System.out.println("BloomFilter mightContain('https://example.com'): " + filter.mightContain("https://example.com"));
+                System.out.println("===============================================");
+            }
+
             // 5. Agora db está inicializado e pode fazer commit
             saveInfo();
 
@@ -142,8 +153,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * This will be used in case I use my own files (I am the reference barrel)
      * This will happen to the first barrel created
      * */
+
     private void loadInfo() {
-        System.out.println("Loading info from MapDB storage...");
+        if(DebugConfig.DEBUG_FICHEIROS){
+            System.out.println("[DEBUG]: Loading info from MapDB storage...");
+        }
         db = DBMaker.fileDB(dbPath)
                 .fileMmapEnableIfSupported()
                 .closeOnJvmShutdown()
@@ -154,19 +168,44 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         adjacencyList = db.hashMap("adjacencyList", Serializer.STRING, Serializer.JAVA).createOrOpen();
         invertedIndex = db.hashMap("invertedIndex", Serializer.STRING, Serializer.JAVA).createOrOpen();
 
+        ConcurrentMap<String, Integer> loadedExpected = db.hashMap("expectedSeqNumbers",
+                Serializer.STRING, Serializer.INTEGER).createOrOpen();
+        expectedSeqNumbers = new ConcurrentHashMap<>(loadedExpected);
+
+        ConcurrentMap<String, Set<Integer>> loadedReceived = db.hashMap("receivedSeqNumbers",
+                Serializer.STRING, Serializer.JAVA).createOrOpen();
+        receivedSeqNumbers = new ConcurrentHashMap<>(loadedReceived);
 
         // Load BloomFilter
         File bloomFile = new File(dbPath + "_bloom.bin");
         if (bloomFile.exists()) {
             try (InputStream in = new FileInputStream(bloomFile)) {
                 filter = BloomFilter.readFrom(in, Funnels.unencodedCharsFunnel());
-                System.out.println("Bloom filter loaded from MapDB storage.");
+                if(DebugConfig.DEBUG_FICHEIROS){
+                    System.out.println("[DEBUG] Bloom filter loaded from file.");
+                }
             } catch (IOException e) {
-                System.err.println("Error loading Bloom filter: " + e.getMessage());
+                if(DebugConfig.DEBUG_FICHEIROS){
+                    System.out.println("[DEBUG] Error loading Bloom filter from file. Creating new empty filter.");
+                }
                 filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
             }
         } else {
-            System.out.println("Bloom filter file not found. Created new empty filter.");
+            if(DebugConfig.DEBUG_FICHEIROS){
+                System.out.println("[DEBUG] Bloom filter file not found. Creating new empty filter.");
+            }
+            filter = BloomFilter.create(Funnels.unencodedCharsFunnel(), expectedInsertionsBloomFilter, fpp);
+        }
+
+        if (DebugConfig.DEBUG_FICHEIROS) {
+            System.out.println("=================== [DEBUG] ===================");
+            System.out.println("PagesInfo loaded: " + pagesInfo.size());
+            System.out.println("AdjacencyList loaded: " + adjacencyList.size());
+            System.out.println("InvertedIndex loaded: " + invertedIndex.size());
+            System.out.println("ExpectedSeqNumbers loaded: " + expectedSeqNumbers.size());
+            System.out.println("ReceivedSeqNumbers loaded: " + receivedSeqNumbers.size());
+            System.out.println("BloomFilter mightContain('https://example.com'): " + filter.mightContain("https://example.com"));
+            System.out.println("===============================================");
         }
     }
 
@@ -174,7 +213,17 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * Save all the information to MapDB
      * */
     private void saveInfo() throws IOException {
+        ConcurrentMap<String, Integer> dbExpected = db.hashMap("expectedSeqNumbers",
+                Serializer.STRING, Serializer.INTEGER).createOrOpen();
+        dbExpected.clear();
+        dbExpected.putAll(expectedSeqNumbers);
+
+        ConcurrentMap<String, Set<Integer>> dbReceived = db.hashMap("receivedSeqNumbers", Serializer.STRING, Serializer.JAVA).createOrOpen();
+        dbReceived.clear();
+        dbReceived.putAll(receivedSeqNumbers);
+
         db.commit();
+
         try (OutputStream out = new FileOutputStream(dbPath + "_bloom.bin")) {
             synchronized (filterLock){
                 filter.writeTo(out);
@@ -182,7 +231,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Info saved to MapDB.");
+
+        if(DebugConfig.DEBUG_FICHEIROS){
+            System.out.println("[DEBUG]: Info saved to MapDB storage.");
+        }
     }
 
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
@@ -229,7 +281,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         synchronized (pageInfoLock) {
             synchronized (filterLock) {
                 if (mightContain(url) && pagesInfo.containsKey(url)) {
-                    System.out.println("URL was already indexed, not adding to queue: " + url);
+                    if (DebugConfig.DEBUG_URL_INDEXAR) {
+                        System.out.println("[DEBUG]: URL já indexada, não adicionada à fila: " + url);
+                    }
                     return false;
                 }
             }
@@ -237,8 +291,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
         synchronized (queueLock) {
             urlQueue.add(url);
-            System.out.println("URL added to queue: " + url);
+            if(DebugConfig.DEBUG_URL_INDEXAR) {
+                System.out.println("[DEBUG]: URL adicionada à fila: " + url);
+            }
         }
+
         return true;
     }
 
@@ -317,7 +374,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
 
     public ConcurrentMap<String, Integer> getExpectedSeqNumber() throws RemoteException {
-        // Cópia defensiva
         return new ConcurrentHashMap<>(expectedSeqNumbers);
     }
 
