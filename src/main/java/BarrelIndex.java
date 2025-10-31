@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public interface BarrelIndex extends Remote {
     //Method to add URL to the queue (called from Gateway and Downloader)
-    void addUrlToQueue(String url) throws RemoteException;
+    boolean addUrlToQueue(String url) throws RemoteException;
 
     // Métodos de adi!ao
     void addPageInfo(PageInfo pageInfo) throws RemoteException;

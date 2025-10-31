@@ -46,6 +46,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     @Override
     public void addUrl(String url) throws RemoteException {
         try {
+            //Mudar true false, mesnagem
             barrel1.addUrlToQueue(url);
             System.out.println("URL enviado para Barrel1: " + url);
         } catch (Exception e1) {

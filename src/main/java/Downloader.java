@@ -29,7 +29,8 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
             Registry regA = LocateRegistry.getRegistry(IpBarrelA, PortBarrelA);
             BarrelIndex barrel1 = (BarrelIndex) regA.lookup(nameBarrelA);
             barrels.add(barrel1);
-            System.out.println(" Ligado ao barrel : " + nameBarrelA);
+
+            System.out.println(" Ligado ao barrel : " + nameBarrelA + " IP: " + IpBarrelA + " PORTA: " + PortBarrelA);
         } catch (Exception e) {
             System.err.println(" Erro ao ligar ao " + nameBarrelA + " " + e.getMessage());
         }
@@ -38,9 +39,10 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
             Registry regB = LocateRegistry.getRegistry(IpBarrelB, PortBarrelB);
             BarrelIndex barrel2 = (BarrelIndex) regB.lookup(nameBarrelB);
             barrels.add(barrel2);
-            System.out.println(" Ligado ao barrel : " + nameBarrelB);
+
+            System.out.println(" Ligado ao barrel : " + nameBarrelB + " IP: " + IpBarrelB + " PORTA: " + PortBarrelB);
         } catch (Exception e) {
-            System.err.println(" Erro ao ligar ao " + nameBarrelA + " " + e.getMessage());
+            System.err.println(" Erro ao ligar ao " + nameBarrelB + " " + e.getMessage());
         }
 
     }

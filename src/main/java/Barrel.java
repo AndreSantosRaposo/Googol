@@ -187,7 +187,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
         synchronized (messageLock){
-            // garantir estruturas para o remetente
+            // garantir estruturas
             Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
             expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
 
@@ -225,12 +225,12 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * This will be stored by URLs that downlaoder will parse
      * @param url
      */
-    public void addUrlToQueue(String url) throws RemoteException {
+    public boolean addUrlToQueue(String url) throws RemoteException {
         synchronized (pageInfoLock) {
             synchronized (filterLock) {
                 if (mightContain(url) && pagesInfo.containsKey(url)) {
                     System.out.println("URL was already indexed, not adding to queue: " + url);
-                    return;
+                    return false;
                 }
             }
         }
@@ -239,6 +239,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             urlQueue.add(url);
             System.out.println("URL added to queue: " + url);
         }
+        return true;
     }
 
 
