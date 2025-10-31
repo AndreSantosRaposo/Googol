@@ -12,6 +12,7 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     private String name;
     private String ip;
     private int port;
+    private int currentBarrel = 1; // Para round-robin
 
     // HashMap escalável: nome -> [ip, porta, conexão]
     private HashMap<String, Object[]> barrels;
@@ -53,6 +54,29 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     public synchronized void notifyBarrelUp(String barrelName) throws RemoteException {
         System.out.println("[Downloader] Recebida notificação: " + barrelName + " está UP");
         connectToBarrel(barrelName);
+    }
+
+    public void processNextUrl() throws Exception {
+        BarrelIndex targetBarrel = null;
+        List<BarrelIndex> activeBarrels = getActiveBarrels();
+
+        // Se não há barrels ativos
+        if (activeBarrels.isEmpty()) {
+            System.err.println(" Nenhum Barrel disponível! A aguardar 5 segundos...");
+            Thread.sleep(5000);
+            return;
+        }
+
+        // Round-robin simples
+        int index = (currentBarrel++) % activeBarrels.size();
+        targetBarrel = activeBarrels.get(index);
+
+        // Pede um URL à fila do Barrel atual
+        String nextUrl = targetBarrel.getUrlFromQueue();
+
+        if (nextUrl != null && !nextUrl.isEmpty()) {
+            scrapURL(nextUrl);
+        }
     }
 
     private synchronized List<BarrelIndex> getActiveBarrels() {
