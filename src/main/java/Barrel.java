@@ -203,6 +203,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // aplicar efeitos
             addPageInfo(page);
             for (String link : urls) {
+                if (DebugConfig.DEBUG_URL) {
+                    System.out.println("[DEBUG]Scraping link: " + link);
+
+                }
                 addAdjacency(page.getUrl(),link);
                 addUrlToQueue(link);
             }
@@ -230,6 +234,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             synchronized (filterLock) {
                 if (mightContain(url) && pagesInfo.containsKey(url)) {
                     System.out.println("URL was already indexed, not adding to queue: " + url);
+
                     return false;
                 }
             }
@@ -238,6 +243,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         synchronized (queueLock) {
             urlQueue.add(url);
             System.out.println("URL added to queue: " + url);
+
+
+
         }
         return true;
     }
