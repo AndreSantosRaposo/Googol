@@ -105,7 +105,7 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
                 try {
                     barrel.receiveMessage(currentSeq, pageInformation, hrefs, name, ip, port);
                     if (DebugConfig.DEBUG_DOWNLOADER || DebugConfig.DEBUG_ALL) {
-                        System.out.println("[DEBUG] Página enviada "+pageInformation.getTitle()+" com seq=" + currentSeq + " ao Barrel from:" + name);
+                        System.out.println("[DEBUG] Página enviada + " + pageInformation.getTitle() + " com seq=" + currentSeq + " ao Barrel from:" + name);
                     }
                 } catch (Exception e) {
                     System.err.println("Erro ao enviar ao Barrel: " + e.getMessage());
