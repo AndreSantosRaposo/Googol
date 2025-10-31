@@ -44,7 +44,7 @@ public class Cliente {
                     List<PageInfo> results = gateway.search(query);
                     System.out.println("Resultados:");
                     for (PageInfo p : results) {
-                        System.out.printf("- %s (%s)%n", p.getTitle(), p.getUrl());
+                        System.out.printf("- %s (%s) citação: %s\n", p.getTitle(), p.getUrl(), p.getSmallText());
                     }
 
                 } else if (opcao == 2) {
