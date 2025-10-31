@@ -253,11 +253,14 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
             // aplicar efeitos
             addPageInfo(page);
+            Integer i=0;
             for (String link : urls) {
+                while(i<10){
                 if (DebugConfig.DEBUG_URL) {
                     System.out.println("[DEBUG]Scraping link: " + link);
+                    i++;
 
-                }
+                }}
                 addAdjacency(page.getUrl(),link);
                 addUrlToQueue(link);
             }
@@ -318,7 +321,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     public void addPageInfo(PageInfo pageInfo) throws RemoteException {
         synchronized (pageInfoLock) {
             pagesInfo.put(pageInfo.getUrl(), pageInfo);
-            System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
+           // System.out.println("Added PageInfo for URL: " + pageInfo.getUrl());
         }
 
         // Atualizar índice invertido com as palavras desta página
@@ -350,8 +353,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             // Put explícito para garantir persistência no MapDB
             adjacencyList.put(toUrl, adjacencies);
 
-            //System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
-        }
+
+           // System.out.println("Adjacência adicionada: " + fromUrl + " -> " + toUrl);
+}
     }
 
     /**
