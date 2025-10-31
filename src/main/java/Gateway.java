@@ -1,3 +1,5 @@
+import kotlin.jvm.Synchronized;
+
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -9,6 +11,8 @@ import java.util.List;
 public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     private final BarrelIndex barrel1;
     private final BarrelIndex barrel2;
+    private int nextBarrel = 1;
+
 
     public Gateway(BarrelIndex b1, BarrelIndex b2) throws RemoteException {
         super();
@@ -19,21 +23,21 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     /**
      * Pesquisa nos dois Barrels e devolve a lista combinada.
      */
-    @Override
-    public List<PageInfo> search(String query) throws RemoteException {
+
+    public  List<PageInfo> search(String query) throws RemoteException {
         List<String> terms = List.of(query.toLowerCase().split("\\s+"));
         List<PageInfo> results = new ArrayList<>();
 
         try {
-            results.addAll(barrel1.searchPages(terms));
+            if(nextBarrel==1) {
+                results.addAll(barrel1.searchPages(terms));
+                nextBarrel=2;
+            }else{
+                results.addAll(barrel2.searchPages(terms));
+                nextBarrel=1;
+            }
         } catch (Exception e) {
-            System.err.println("Erro ao pesquisar no Barrel1: " + e.getMessage());
-        }
-
-        try {
-            results.addAll(barrel2.searchPages(terms));
-        } catch (Exception e) {
-            System.err.println("Erro ao pesquisar no Barrel2: " + e.getMessage());
+            System.err.println("Erro ao pesquisar no Barrel" + nextBarrel + ": " + e.getMessage());
         }
 
         return results;

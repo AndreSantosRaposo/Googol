@@ -54,21 +54,21 @@ public class DownloaderServer {
                 System.out.println("Erro ao obter o registro de barrel 2: " + e.getMessage());
             }
             // Ciclo principal
-            int currentBarrel = 0;
+            int currentBarrel = 1;
 
             while (true) {
                 try {
                     BarrelIndex targetBarrel = null;
 
                     // Tenta selecionar um Barrel disponível (com round-robin)
-                    if (currentBarrel == 0) {
+                    if (currentBarrel == 1) {
                         if (barrel1 != null) {
                             targetBarrel = barrel1;
                         } else if (barrel2 != null) {
                             targetBarrel = barrel2;
                             System.out.println(" Barrel1 indisponível, a usar Barrel2");
                         }
-                        currentBarrel = 1;
+                        currentBarrel = 2;
                     } else {
                         if (barrel2 != null) {
                             targetBarrel = barrel2;
@@ -76,7 +76,7 @@ public class DownloaderServer {
                             targetBarrel = barrel1;
                             System.out.println(" Barrel2 indisponível, a usar Barrel1");
                         }
-                        currentBarrel = 0;
+                        currentBarrel = 1;
                     }
 
                     // Se nenhum Barrel está disponível
