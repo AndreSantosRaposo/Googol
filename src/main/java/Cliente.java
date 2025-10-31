@@ -10,6 +10,7 @@ public class Cliente {
             PageInfo p = results.get(LimMin);
             System.out.printf("- %s (%s) citação: %s\n",
                     p.getTitle(), p.getUrl(), p.getSmallText());
+            LimMin++;
 
         }
     }
