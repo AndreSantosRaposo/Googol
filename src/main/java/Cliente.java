@@ -5,11 +5,22 @@ import java.util.Scanner;
 
 public class Cliente {
 
+    private static void dezLinks(Integer LimMax, Integer LimMin, List<PageInfo> results){
+        while(LimMin < LimMax && LimMin < results.size()){
+            PageInfo p = results.get(LimMin);
+            System.out.printf("- %s (%s) citação: %s\n",
+                    p.getTitle(), p.getUrl(), p.getSmallText());
+
+        }
+    }
+
     public static void main(String[] args) {
 
         String filename = "config.txt";
         final int CLIENTE_LINE = 6;
         final int GATEWAY_LINE = 1;
+        int LimMax=10;
+        int LimMin=0;
 
         try {
             // === Ler config do cliente ===
@@ -40,6 +51,7 @@ public class Cliente {
                 System.out.print("Escolha: ");
 
                 int opcao;
+                String opcaoString;
                 try {
                     opcao = Integer.parseInt(sc.nextLine());
                 } catch (NumberFormatException e) {
@@ -67,26 +79,41 @@ public class Cliente {
                         if (results.isEmpty()) {
                             System.out.println("(Nenhum resultado encontrado)");
                         } else {
-                            for (PageInfo p : results) {
-                                System.out.printf("- %s (%s) citação: %s\n",
-                                        p.getTitle(), p.getUrl(), p.getSmallText());
-                            }
+                            dezLinks( LimMax,  LimMin, results);
+
                         }
-                    } catch (Exception e) {
+                        Boolean temp=true;
+                        while (temp) {
+                        System.out.println("Deseja ver proximos 10 links?");
+                        opcaoString = sc.nextLine();
+                        if (opcaoString.equalsIgnoreCase("s")) {
+                            if(LimMax+10< results.size()){
+                                dezLinks(results.size()-LimMax, LimMin+10, results);
+                                System.out.println("Acabaram os links");
+                                temp=false;
+                            }else {
+                                dezLinks(LimMax + 10, LimMin + 10, results);
+                            }
+                        }else if (opcaoString.equalsIgnoreCase("n")) {
+                            temp=false;
+                        }
+
+                    } }catch (Exception e) {
                         System.err.println("Erro ao pesquisar: " + e.getMessage());
                     }
+
 
                 } else if (opcao == 2) {
                     System.out.print("Digite a URL: ");
                     String url = sc.nextLine().trim();
 
                     if (url.isEmpty()) {
-                        System.err.println("⚠️ Erro: A URL não pode estar vazia. Tente novamente.");
+                        System.err.println("Erro: A URL não pode estar vazia. Tente novamente.");
                         continue;
                     }
 
                     if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                        System.err.println("⚠️ Aviso: A URL deve começar com 'http://' ou 'https://'. Tente novamente.");
+                        System.err.println(" Aviso: A URL deve começar com 'http://' ou 'https://'. Tente novamente.");
                         continue;
                     }
 
