@@ -288,7 +288,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     public boolean addUrlToQueue(String url) throws RemoteException {
         synchronized (pageInfoLock) {
             synchronized (filterLock) {
-                if (mightContain(url) && pagesInfo.containsKey(url)) {
+                if (mightContain(url)) {
                     if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_ALL) {
                         System.out.println("[DEBUG]: URL já indexada, não adicionada à fila: " + url);
                     }
