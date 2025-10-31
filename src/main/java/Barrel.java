@@ -539,7 +539,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     public static void main(String[] args) throws RemoteException, Exception {
-        String dbPath = "barrelMapDB.db";
+        String dbPath = "Barrel2_MapDB.db";
 
         Barrel barrel = new Barrel(dbPath,"ahhhh");
 
