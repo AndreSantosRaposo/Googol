@@ -41,6 +41,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     private final Object messageLock = new Object();
     private final Object invertedIndexLock = new Object();
 
+    private double probabilidadeTemp = 0.0;
+    private double probabilidadeTempDownlaoder = 0.0;
+
     int semaforo;
     DB db;
     String dbPath;
@@ -235,6 +238,13 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
+        if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+            if (Math.random() > probabilidadeTempDownlaoder) {
+                System.out.println("[DEBUG]: Mensagem falhou a ser entregue (seqNumber: " + seqNumber + ")");
+                probabilidadeTempDownlaoder += 0.5; // diminuir probabilidade de falha na próxima
+                return;
+            }
+        }
         synchronized (messageLock){
             // garantir estruturas
             Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
@@ -242,7 +252,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
             // ignorar duplicados
             if (received.contains(seqNumber)) {
-                System.out.println("Seq " + seqNumber + " já recebido. Ignorado.");
+                if(DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL){
+                    System.out.println("[DEBUG] Mensagem duplicada recebida com seqNumber: " + seqNumber + ". Ignorada.");
+                }
                 return;
             }
 
@@ -294,7 +306,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * @param url
      */
     public boolean addUrlToQueue(String url) throws RemoteException {
-        synchronized (pageInfoLock) {
             synchronized (filterLock) {
                 if (mightContain(url)) {
                     if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_ALL) {
@@ -303,7 +314,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                     return false;
                 }
             }
-        }
 
         synchronized (queueLock) {
             urlQueue.add(url);
@@ -316,6 +326,132 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         return true;
     }
 
+    public boolean addUrlToQueue(String url, int seqNumber, String nome, String ip, Integer port) throws RemoteException {
+        // 1. Simular perda de mensagens (DEBUG)
+        if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+            if (Math.random() > probabilidadeTemp) {
+                System.out.println("[DEBUG]: Mensagem falhou a ser entregue (seqNumber: " + seqNumber + ")");
+                probabilidadeTemp += 0.5; // diminuir probabilidade de falha na próxima
+                return false;
+            }
+        }
+
+        List<Integer> missingSeqNumbers = new ArrayList<>();
+
+        // 2. Verificar duplicados e detetar lacunas (dentro do lock)
+        synchronized (messageLock) {
+            Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
+            int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
+
+            // Se já foi recebido, ignorar
+            if (received.contains(seqNumber)) {
+                if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+                    System.out.println("[DEBUG]: SeqNumber " + seqNumber + " duplicado. Ignorado.");
+                }
+                return false;
+            }
+
+            // Se há lacuna, guardar números em falta (MAS NÃO PEDIR AINDA)
+            if (seqNumber > expectedSeqNumber) {
+                System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + seqNumber);
+
+                for (int missing = expectedSeqNumber; missing < seqNumber; missing++) {
+                    if (!received.contains(missing)) {
+                        missingSeqNumbers.add(missing);
+                    }
+                }
+            }
+
+            // Marcar como recebido
+            received.add(seqNumber);
+
+            // Atualizar expectedSeqNumber
+            int e = expectedSeqNumber;
+            while (received.contains(e)) e++;
+            expectedSeqNumbers.put(nome, e);
+
+            System.out.println("SeqNumber " + seqNumber + " processado. Expected agora: " + e);
+        }
+
+        // 3. Pedir reenvios FORA do lock (evita deadlock)
+        for (int missing : missingSeqNumbers) {
+            System.out.println("A pedir reenvio da URL com seqNumber: " + missing);
+            new Thread(() -> requestMissingUrl(missing, nome, ip, port)).start();
+        }
+
+
+        boolean urlAdded = false;
+
+        // 4. Verificar se URL já foi indexada
+        synchronized (filterLock) {
+            if (mightContain(url)) {
+                if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_ALL) {
+                    System.out.println("[DEBUG]: URL já indexada: " + url);
+                }
+            } else {
+                synchronized (queueLock) {
+                    urlQueue.add(url);
+                    addToBloomFilter(url);
+                    urlAdded = true;
+                    if (DebugConfig.DEBUG_URL_INDEXAR) {
+                        System.out.println("[DEBUG]: URL adicionada: " + url);
+                    }
+                }
+            }
+        }
+
+        return urlAdded;
+    }
+
+
+    private void checkForMissingUrls(int receivedSeqNumber, String nome, String ip, Integer port) {
+        int expectedSeqNumber;
+        Set<Integer> received;
+
+        synchronized (messageLock) {
+            expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
+            received = new HashSet<>(receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>()));
+        }
+
+        // Verificar lacunas
+        if (receivedSeqNumber > expectedSeqNumber) {
+            System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
+
+            for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
+                if (!received.contains(missing)) {
+                    System.out.println("A pedir reenvio da URL com seqNumber: " + missing);
+                    requestMissingUrl(missing, nome, ip, port);
+                }
+            }
+        }
+    }
+
+    private void requestMissingUrl(int missingSeqNumber, String nome, String ip, Integer port) {
+        try {
+            System.setProperty("java.rmi.server.hostname", ip);
+
+            Registry reg = LocateRegistry.getRegistry(ip, port);
+            GatewayInterface gateway = (GatewayInterface) reg.lookup(nome);
+
+            if (gateway == null) {
+                System.err.println("Downloader não está disponível para pedir reenvio.");
+                return;
+            }
+
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER) {
+                System.out.println("A pedir reenvio da URL com seqNumber: " + missingSeqNumber);
+            }
+            gateway.reSendURL(missingSeqNumber, this);
+        } catch (NotBoundException e) {
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER) {
+                System.err.println("Nome não ligado no RMI Registry: " + nome);
+            }
+        } catch (RemoteException e) {
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER) {
+                System.err.println("Erro de RMI ao pedir reenvio da URL " + missingSeqNumber + ": " + e.getMessage());
+            }
+        }
+    }
 
     // Substituir addPageInfo() completamente:
     public void addPageInfo(PageInfo pageInfo) throws RemoteException {
@@ -362,7 +498,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
      * Add URL to Bloom filter
      * @param url
      */
-    public void addToBloomFilter(String url) throws RemoteException{
+    private void addToBloomFilter(String url) throws RemoteException{
         synchronized (filterLock){
             filter.put(url);
             System.out.println("URL added to Bloom filter: " + url);
@@ -501,17 +637,19 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     }
 
     private void checkForMissingMessages(int receivedSeqNumber, String nome, String ip, Integer port) {
-        int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
-        Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
+        synchronized (messageLock) {
+            int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
+            Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
 
-        // Verificar se há falhas entre expectedSeqNumber e receivedSeqNumber
-        if (receivedSeqNumber > expectedSeqNumber) {
-            System.out.println("Detetada lacuna! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
+            // Verificar se há falhas entre expectedSeqNumber e receivedSeqNumber
+            if (receivedSeqNumber > expectedSeqNumber) {
+                System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
 
-            // Pedir reenvio de todas as mensagens em falta
-            for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
-                if (!receivedSeqNumbers.get(nome).contains(missing)) {
-                    requestMissingMessage(missing,nome,ip,port);
+                // Pedir reenvio de todas as mensagens em falta
+                for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
+                    if (!received.contains(missing)) {
+                        requestMissingMessage(missing, nome, ip, port);
+                    }
                 }
             }
         }
@@ -520,7 +658,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     private void requestMissingMessage(int missingSeqNumber, String nome, String ip, Integer port) {
         try {
             System.setProperty("java.rmi.server.hostname", ip);
-            /*Nao sei se é preciso*/
+
             Registry reg = LocateRegistry.getRegistry(port); // host/port por omissão; ajuste se necessário
             DownloaderIndex downloader = (DownloaderIndex) reg.lookup(nome);
 
@@ -529,7 +667,10 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                 return;
             }
 
-            System.out.println("A pedir reenvio da mensagem com seqNumber: " + missingSeqNumber);
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER) {
+                System.out.println("A pedir reenvio da mensagem com seqNumber: " + missingSeqNumber);
+            }
+
             downloader.reSendMessages(missingSeqNumber, this);
         } catch (NotBoundException e) {
             System.err.println("Nome não ligado no RMI Registry: " + nome);
@@ -538,37 +679,32 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
-    public static void main(String[] args) throws RemoteException, Exception {
-        String dbPath = "Barrel2_MapDB.db";
+    /**
+     * Reset seq numbers for the gateway
+     * @param gatewayName
+     * @throws RemoteException
+     */
+    public synchronized void resetSeqNumbers(String gatewayName) throws RemoteException {
+        try {
+            // Inicializar HashMaps se necessário
+            if (receivedSeqNumbers == null) {
+                receivedSeqNumbers = new ConcurrentHashMap<>();
+            }
+            if (expectedSeqNumbers == null) {
+                expectedSeqNumbers = new ConcurrentHashMap<>();
+            }
 
-        Barrel barrel = new Barrel(dbPath,"ahhhh");
+            // Limpar ou inicializar para este downloader
+            receivedSeqNumbers.put(gatewayName, new HashSet<>());
+            expectedSeqNumbers.put(gatewayName, 0);
 
-        if (barrel.pagesInfo.isEmpty() && barrel.adjacencyList.isEmpty()) {
-            System.out.println("🔧 Filling structures for the first time...");
-
-            barrel.addUrlToQueue("https://example.com");
-            barrel.addUrlToQueue("https://openai.com");
-            barrel.addUrlToQueue("https://uc.pt");
-
-            PageInfo page1 = new PageInfo("Example", "https://example.com", List.of("sample", "page", "example"), "Example summary");
-            PageInfo page2 = new PageInfo("OpenAI", "https://openai.com", List.of("ai", "language", "model"), "OpenAI summary");
-            PageInfo page3 = new PageInfo("UC", "https://uc.pt", List.of("university", "coimbra", "education"), "UC summary");
-
-            barrel.addPageInfo(page1);
-            barrel.addPageInfo(page2);
-            barrel.addPageInfo(page3);
-
-            barrel.addAdjacency("https://example.com", "https://openai.com");
-            barrel.addAdjacency("https://example.com", "https://uc.pt");
-            barrel.addAdjacency("https://openai.com", "https://example.com");
-
-            barrel.addToBloomFilter("https://example.com");
-            barrel.addToBloomFilter("https://openai.com");
-            barrel.addToBloomFilter("https://uc.pt");
-
-            barrel.saveInfo();
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+                System.out.println("[DEBUG] Seq numbers reset for: " + gatewayName + "in Barrel: " + registryName);
+            }
+        } catch (Exception e) {
+            System.err.println("[" + registryName + "] Erro ao fazer reset: " + e.getMessage());
+            throw new RemoteException("Erro no reset de seqNumbers", e);
         }
-
-        barrel.printAll();
     }
+
 }
