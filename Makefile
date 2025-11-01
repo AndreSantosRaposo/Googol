@@ -1,12 +1,16 @@
 # makefile
-# Colocar em `C:\UNI\projetos\3ano\sd-projeto\Googol\Makefile`
 MVN = mvn
 JAVA = java
 DEPDIR = target/dependency
 JARDIR = target
-# Por omissão assume Windows classpath separators (semicolon).
-# Para usar em Unix: make run-barrel CP="target/classes:target/dependency/*"
-CP ?= target\classes;target\dependency\*
+
+UNAME := $(shell uname 2>/dev/null || echo Windows)
+ifeq ($(UNAME),Windows)
+  CP_DEFAULT = target\classes;target\dependency\*
+else
+  CP_DEFAULT = target/classes:target/dependency/*
+endif
+CP ?= $(CP_DEFAULT)
 
 .PHONY: all build copy-deps clean run-barrel run-downloader run-gateway run-barrel-mvn run-downloader-mvn run-gateway-mvn
 
@@ -32,7 +36,7 @@ run-downloader-mvn:
 run-gateway-mvn:
 	$(MVN) exec:java -Dexec.mainClass="GatewayServer"
 
-# Run directly with java (usa CP; garantir que target\dependency existe)
+# Run directly with java (usa CP; garantir que target/dependency existe)
 run-barrel: copy-deps
 	$(JAVA) -cp "$(CP)" BarrelServer
 
