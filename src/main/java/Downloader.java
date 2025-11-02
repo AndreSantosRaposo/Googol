@@ -9,9 +9,9 @@ import java.rmi.registry.Registry;
 public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     private HashMap<Integer, HistoryMessage> historyBuffer;
     private int seqNumber;
-    private String name;
-    private String ip;
-    private int port;
+    private final String name;
+    private final String ip;
+    private final int port;
     private int currentBarrel = 1; // Para round-robin
 
     // HashMap escalável: nome -> [ip, porta, conexão]
@@ -102,15 +102,19 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
         HistoryMessage message = historyBuffer.get(seqNumber);
 
         if (message == null) {
-            System.err.println("Mensagem com seqNumber " + seqNumber + " não encontrada no histórico.");
+            if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+                System.out.println("[DEBUG] Mensagem com seqNumber: " + seqNumber + " não encontrada no buffer de histórico.");
+            }
             return;
         }
 
-        System.out.println("Reenviando mensagem com seqNumber: " + seqNumber + " ao barrel que solicitou.");
+        if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+            System.out.println("[DEBUG] Renviando mensagem com seqNumber: " + seqNumber + " ao Barrel que pediu.");
+        }
 
         try {
             requestingBarrel.receiveMessage(seqNumber, message.getPage(), message.getUrls(), name, ip, port);
-            System.out.println("Mensagem reenviada com sucesso ao Barrel solicitante.");
+            System.out.println("Mensagem reenviada com sucesso ao Barrel que pediu.");
         } catch (Exception e) {
             System.err.println("Erro ao reenviar dados ao Barrel: " + e.getMessage());
         }
@@ -149,16 +153,5 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
         } catch (Exception e) {
             System.out.println("Erro ao processar URL: " + e.getMessage());
         }
-    }
-
-    Downloader(String nome, HashMap<String, Object[]> barrels) throws RemoteException {
-        this.name = nome;
-        this.barrels = barrels;
-        this.historyBuffer = new HashMap<>();
-        this.seqNumber = 0;
-    }
-
-    void addToHistory(int seq, HistoryMessage msg) {
-        historyBuffer.put(seq, msg);
     }
 }

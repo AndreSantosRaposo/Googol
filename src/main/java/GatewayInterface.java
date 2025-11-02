@@ -17,6 +17,14 @@ public interface GatewayInterface extends Remote {
     List<PageInfo> search(String query) throws RemoteException;
 
     /**
+     * Reenvia mensagens em falta para o Barrel especificado.
+     * @param missingSeqNumber número de sequência da primeira mensagem em falta
+     * @param receiver Barrel que deve receber as mensagens reenviadas
+     * @throws RemoteException em caso de falha de comunicação RMI
+     */
+    void reSendURL(int missingSeqNumber, BarrelIndex receiver) throws RemoteException;
+
+    /**
      * Adiciona uma nova URL para ser indexada.
      * @param url URL a ser indexada
      * @throws RemoteException em caso de falha de comunicação RMI

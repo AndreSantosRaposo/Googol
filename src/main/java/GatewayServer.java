@@ -26,7 +26,8 @@ public class GatewayServer {
             // Criar Gateway com info de conexão
             Gateway gateway = new Gateway(
                     barrel1Name, barrel1Ip, barrel1Port,
-                    barrel2Name, barrel2Ip, barrel2Port
+                    barrel2Name, barrel2Ip, barrel2Port,
+                    gatewayIp, gatewayPort
             );
 
             // Registar Gateway

@@ -10,11 +10,11 @@ public class DebugConfig {
 
 
     //Debug para verificar a adição de URLs para indexar (verificar duplicados, etc)
-    public static boolean DEBUG_URL_INDEXAR = true;
+    public static boolean DEBUG_URL_INDEXAR = false;
     //Verificar que caminho barrel ecolhe (pedir infomracão a outro ou indexar, verificar se leitura e escrita nos ficheiros funciona)
     public static boolean DEBUG_FICHEIROS = true;
-    public static boolean DEBUG_SEARCH = false;
-    public static boolean DEBUG_INDEXING = false;
+    public static boolean DEBUG_MULTICAST_GATEWAY = true;
+    public static boolean DEBUG_MULTICAST_DOWNLOADER = true;
     public static boolean DEBUG_MESSAGES = false;
     public static boolean DEBUG_CLAIMS = false;
     public static boolean DEBUG_DOWNLOADER = true;
