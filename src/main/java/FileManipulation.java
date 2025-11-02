@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Arrays;
 
+/**
+ * Classe para manipulação de ficheiros
+ */
 public class FileManipulation {
 
     /**
