@@ -94,28 +94,36 @@ public class Cliente {
     /**
      * Ponto de entrada principal.
      */
+    /* === Main method === */
     public static void main(String[] args) {
         final String filename = "config.txt";
         final int GATEWAY_LINE = 1;
 
-        String gatewayName, gatewayIp;
+        // Read Gateway configuration
+        String gatewayName;
+        String gatewayIp;
         int gatewayPort;
-
         try {
             List<String> gatewayCfg = FileManipulation.lineSplitter(filename, GATEWAY_LINE, ";");
             gatewayName = gatewayCfg.get(0).trim();
             gatewayIp = gatewayCfg.get(1).trim();
             gatewayPort = Integer.parseInt(gatewayCfg.get(2).trim());
-
-            Registry registry = LocateRegistry.getRegistry(gatewayIp, gatewayPort);
-            gateway = (GatewayInterface) registry.lookup(gatewayName);
-            System.out.printf(" Cliente conectado ao Gateway em %s:%d%n", gatewayIp, gatewayPort);
         } catch (Exception e) {
-            System.err.println("Erro ao conectar ao Gateway: " + e.getMessage());
+            System.err.println("Error reading gateway configuration: " + e.getMessage());
             return;
         }
 
+        // Connect to Gateway
+        try {
+            Registry registry = LocateRegistry.getRegistry(gatewayIp, gatewayPort);
+            gateway = (GatewayInterface) registry.lookup(gatewayName);
+            System.out.printf("Client connected to Gateway at %s:%d%n", gatewayIp, gatewayPort);
+        } catch (Exception e) {
+            System.err.println("Could not connect to Gateway: " + e.getMessage());
+
+        }
         Scanner sc = new Scanner(System.in);
+
         try {
             while (true) {
                 System.out.println("\n--- MENU CLIENTE ---");
