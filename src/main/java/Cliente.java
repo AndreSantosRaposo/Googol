@@ -23,7 +23,7 @@ public class Cliente {
                 }
 
                 gateway.addUrl(url);
-                System.out.println("✅ URL adicionada com sucesso!");
+                System.out.println(" URL adicionada com sucesso!");
                 return true;
 
             } catch (Exception e) {
@@ -97,7 +97,7 @@ public class Cliente {
                 System.out.println("\n--- MENU CLIENTE ---");
                 System.out.println("1. Pesquisar");
                 System.out.println("2. Adicionar URL");
-                System.out.println("3. Pesquisa por inlink");
+                System.out.println("3. Pesquisa por inlink1");
                 System.out.println("4. Sair");
                 System.out.print("Escolha: ");
 
