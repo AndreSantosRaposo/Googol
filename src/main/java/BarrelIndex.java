@@ -24,4 +24,5 @@ public interface BarrelIndex extends Remote {
 
     // Pesquisa remota
     List<PageInfo> searchPages(List<String> terms) throws RemoteException;
+    SystemStats getStats() throws RemoteException;
 }

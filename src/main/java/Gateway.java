@@ -3,6 +3,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -24,6 +25,8 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     private final String gatewayIp;
     private final int gatewayPort;
 
+    private SystemStats globalStats;
+
     public Gateway(String b1Name, String b1Ip, int b1Port,
                    String b2Name, String b2Ip, int b2Port, String gatewayIp, int gatewayPort) throws RemoteException {
         super();
@@ -38,6 +41,7 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         this.name = "Gateway";
         this.gatewayIp = gatewayIp;
         this.gatewayPort = gatewayPort;
+        this.globalStats = new SystemStats();
 
         // Conexão inicial
         reconnectBarrel1();
@@ -80,34 +84,49 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     /**
      * Pesquisa nos dois Barrels e devolve a lista combinada.
      */
-
-    @Override
     public List<PageInfo> search(String query) throws RemoteException {
         List<String> terms = List.of(query.toLowerCase().split("\\s+"));
         List<PageInfo> results = new ArrayList<>();
 
-        // tenta reconectar se necessário
+        // Incrementar contador
+        Arrays.stream(query.toLowerCase().split("\\s+"))
+                .forEach(globalStats::incrementSearchCount);
+
+        // Tenta reconectar se necessário
         if (barrel1 == null) reconnectBarrel1();
         if (barrel2 == null) reconnectBarrel2();
 
         try {
-            // tenta o barrel atual
             if (nextBarrel == 1 && barrel1 != null) {
+                long startTime = System.currentTimeMillis();
                 results.addAll(barrel1.searchPages(terms));
-                nextBarrel = 2; // alterna para o outro da próxima vez
+                long duration = System.currentTimeMillis() - startTime;
+                System.out.println("Duração da pesquisa no Barrel1: " + duration + " ms");
+                globalStats.updateBarrelMetrics(barrel1Name, barrel1.getPagesInfoMap().size(), duration);
+                nextBarrel = 2;
                 return results;
             } else if (nextBarrel == 2 && barrel2 != null) {
+                long startTime = System.currentTimeMillis();
                 results.addAll(barrel2.searchPages(terms));
+                long duration = System.currentTimeMillis() - startTime;
+                System.out.println("Duração da pesquisa no Barrel2: " + duration + " ms");
+                globalStats.updateBarrelMetrics(barrel2Name, barrel2.getPagesInfoMap().size(), duration);
                 nextBarrel = 1;
                 return results;
             }
 
-            // se o barrel da vez estiver indisponível, tenta o outro
+            // Fallback
             if (barrel1 != null) {
+                long startTime = System.currentTimeMillis();
                 results.addAll(barrel1.searchPages(terms));
+                long duration = System.currentTimeMillis() - startTime;
+                globalStats.updateBarrelMetrics(barrel1Name, barrel1.getPagesInfoMap().size(), duration);
                 nextBarrel = 2;
             } else if (barrel2 != null) {
+                long startTime = System.currentTimeMillis();
                 results.addAll(barrel2.searchPages(terms));
+                long duration = System.currentTimeMillis() - startTime;
+                globalStats.updateBarrelMetrics(barrel2Name, barrel2.getPagesInfoMap().size(), duration);
                 nextBarrel = 1;
             } else {
                 throw new RemoteException("Nenhum Barrel disponível para pesquisa.");
@@ -118,9 +137,50 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
 
         return results;
+    }
 
 
-}
+    public SystemStats getSystemStats() throws RemoteException {
+        SystemStats combined = new SystemStats();
+
+        // Combinar pesquisas do Gateway
+        globalStats.getTop10Searches().forEach(e ->
+                combined.incrementSearchCount(e.getKey()));
+
+        // **ADICIONAR AS MÉTRICAS JÁ REGISTADAS NO GATEWAY**
+        globalStats.getBarrelMetrics().forEach((name, metrics) ->
+                combined.updateBarrelMetrics(name,
+                        metrics.getIndexSize(),
+                        metrics.getAvgResponseTimeMs()));
+
+        // Obter stats do Barrel1 (caso não estejam no Gateway)
+        if (barrel1 != null) {
+            try {
+                SystemStats b1Stats = barrel1.getStats();
+                b1Stats.getBarrelMetrics().forEach((name, metrics) ->
+                        combined.updateBarrelMetrics(name,
+                                metrics.getIndexSize(),
+                                metrics.getAvgResponseTimeMs()));
+            } catch (Exception e) {
+                System.err.println("Erro ao obter stats do Barrel1");
+            }
+        }
+
+        // Obter stats do Barrel2 (caso não estejam no Gateway)
+        if (barrel2 != null) {
+            try {
+                SystemStats b2Stats = barrel2.getStats();
+                b2Stats.getBarrelMetrics().forEach((name, metrics) ->
+                        combined.updateBarrelMetrics(name,
+                                metrics.getIndexSize(),
+                                metrics.getAvgResponseTimeMs()));
+            } catch (Exception e) {
+                System.err.println("Erro ao obter stats do Barrel2");
+            }
+        }
+
+        return combined;
+    }
 
     public void addUrl(String url) throws RemoteException {
         if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_MULTICAST_GATEWAY || DebugConfig.DEBUG_ALL) {

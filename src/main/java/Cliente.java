@@ -97,19 +97,20 @@ public class Cliente {
                 System.out.println("\n--- MENU CLIENTE ---");
                 System.out.println("1. Pesquisar");
                 System.out.println("2. Adicionar URL");
-                System.out.println("3. Sair");
+                System.out.println("3. Ver estatísticas");
+                System.out.println("4. Sair");
                 System.out.print("Escolha: ");
 
                 int opcao;
                 try {
                     opcao = Integer.parseInt(sc.nextLine());
                 } catch (NumberFormatException e) {
-                    System.err.println("Erro: Insira um número válido (1-3). Tente novamente.");
+                    System.err.println("Erro: Insira um número válido (1-4). Tente novamente.");
                     continue;
                 }
 
-                if (opcao < 1 || opcao > 3) {
-                    System.err.println("Erro: Opção fora do intervalo (1-3). Tente novamente.");
+                if (opcao < 1 || opcao > 4) {
+                    System.err.println("Erro: Opção fora do intervalo (1-4). Tente novamente.");
                     continue;
                 }
 
@@ -187,6 +188,24 @@ public class Cliente {
                     }
 
                 } else if (opcao == 3) {
+                    try {
+                        SystemStats stats = gateway.getSystemStats();
+
+                        System.out.println("\n=== ESTATÍSTICAS DO SISTEMA ===");
+                        System.out.println("\n🔍 Top 10 Pesquisas:");
+                        stats.getTop10Searches().forEach(e ->
+                                System.out.printf("  %s: %d vezes\n", e.getKey(), e.getValue()));
+
+                        System.out.println("\n📦 Barrels Ativos:");
+                        stats.getBarrelMetrics().forEach((name, metrics) ->
+                                System.out.printf("  %s - Índice: %d páginas | Tempo médio: %.1f ms\n",
+                                        name, metrics.getIndexSize(), metrics.getAvgResponseTimeMs() / 10.0));
+
+                    } catch (Exception e) {
+                        System.err.println("Erro ao obter estatísticas: " + e.getMessage());
+                    }
+
+                } else if (opcao == 4) {
                     System.out.println("A sair...");
                     break;
                 }

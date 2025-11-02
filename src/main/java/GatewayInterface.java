@@ -30,4 +30,6 @@ public interface GatewayInterface extends Remote {
      * @throws RemoteException em caso de falha de comunicação RMI
      */
     void addUrl(String url) throws RemoteException;
+
+    SystemStats getSystemStats() throws RemoteException;
 }

@@ -23,6 +23,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     int expectedInsertionsBloomFilter = 100000;
     double fpp = 0.01;
 
+    // No topo da classe Barrel
+    private SystemStats stats;
+    private List<Long> responseTimes;
 
     Queue<String> urlQueue;
     ConcurrentMap<String, Set<String>> adjacencyList;
@@ -61,6 +64,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         receivedSeqNumbers = new java.util.concurrent.ConcurrentHashMap<>();
         // No construtor (antes de askForInfo)
         invertedIndex = new ConcurrentHashMap<>();
+
+        this.stats = new SystemStats();
+        this.responseTimes = Collections.synchronizedList(new ArrayList<>());
 
         askForInfo();
         semaforo = 1;
@@ -237,6 +243,23 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
+    public SystemStats getStats() throws RemoteException {
+        // Atualizar métricas antes de retornar
+        int indexSize = pagesInfo.size();
+        long avgTime = calculateAvgResponseTime();
+        stats.updateBarrelMetrics(registryName, indexSize, avgTime);
+        return stats;
+    }
+
+    // Calcular tempo médio
+    private long calculateAvgResponseTime() {
+        if (responseTimes.isEmpty()) return 0;
+        return (long) responseTimes.stream()
+                .mapToLong(Long::longValue)
+                .average()
+                .orElse(0.0);
+    }
+
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
         if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
             if (Math.random() > probabilidadeTempDownlaoder) {
@@ -401,28 +424,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         return urlAdded;
     }
 
-
-    private void checkForMissingUrls(int receivedSeqNumber, String nome, String ip, Integer port) {
-        int expectedSeqNumber;
-        Set<Integer> received;
-
-        synchronized (messageLock) {
-            expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
-            received = new HashSet<>(receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>()));
-        }
-
-        // Verificar lacunas
-        if (receivedSeqNumber > expectedSeqNumber) {
-            System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
-
-            for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
-                if (!received.contains(missing)) {
-                    System.out.println("A pedir reenvio da URL com seqNumber: " + missing);
-                    requestMissingUrl(missing, nome, ip, port);
-                }
-            }
-        }
-    }
 
     private void requestMissingUrl(int missingSeqNumber, String nome, String ip, Integer port) {
         try {
@@ -630,7 +631,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                     if (page != null) results.add(page);
                 }
 
-                /*====ORDENAR POR MAIS INLINKS*/
                 synchronized (adjacencyLock) {
                     results.sort((p1, p2) -> {
                         int linksP1 = adjacencyList.getOrDefault(p1.getUrl(), Set.of()).size();
