@@ -88,7 +88,7 @@ public class Cliente {
                         dezLinks(limMax, limMin, results);
 
                         // paginação
-                        while (limMax < results.size()) {
+                        while (limMax <= results.size()) {
                             System.out.print("\nDeseja ver os próximos 10 links? (s/n): ");
                             String opcaoString = sc.nextLine().trim().toLowerCase();
 

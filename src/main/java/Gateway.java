@@ -81,30 +81,46 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
      * Pesquisa nos dois Barrels e devolve a lista combinada.
      */
 
-    public  List<PageInfo> search(String query) throws RemoteException {
-
+    @Override
+    public List<PageInfo> search(String query) throws RemoteException {
         List<String> terms = List.of(query.toLowerCase().split("\\s+"));
         List<PageInfo> results = new ArrayList<>();
 
-        // Tenta reconectar se necessário
+        // tenta reconectar se necessário
         if (barrel1 == null) reconnectBarrel1();
         if (barrel2 == null) reconnectBarrel2();
 
         try {
-            if(nextBarrel==1) {
+            // tenta o barrel atual
+            if (nextBarrel == 1 && barrel1 != null) {
                 results.addAll(barrel1.searchPages(terms));
-                nextBarrel=2;
-            }else{
+                nextBarrel = 2; // alterna para o outro da próxima vez
+                return results;
+            } else if (nextBarrel == 2 && barrel2 != null) {
                 results.addAll(barrel2.searchPages(terms));
-                nextBarrel=1;
+                nextBarrel = 1;
+                return results;
             }
+
+            // se o barrel da vez estiver indisponível, tenta o outro
+            if (barrel1 != null) {
+                results.addAll(barrel1.searchPages(terms));
+                nextBarrel = 2;
+            } else if (barrel2 != null) {
+                results.addAll(barrel2.searchPages(terms));
+                nextBarrel = 1;
+            } else {
+                throw new RemoteException("Nenhum Barrel disponível para pesquisa.");
+            }
+
         } catch (Exception e) {
-            System.err.println("Erro ao pesquisar no Barrel" + nextBarrel + ": " + e.getMessage());
-
-
+            System.err.println("[Gateway] Erro ao pesquisar: " + e.getMessage());
         }
+
         return results;
-    }
+
+
+}
 
     public void addUrl(String url) throws RemoteException {
         if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_MULTICAST_GATEWAY || DebugConfig.DEBUG_ALL) {
