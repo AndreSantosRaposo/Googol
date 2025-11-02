@@ -630,6 +630,22 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                     if (page != null) results.add(page);
                 }
 
+                /*====ORDENAR POR MAIS INLINKS*/
+                synchronized (adjacencyLock) {
+                    results.sort((p1, p2) -> {
+                        int linksP1 = adjacencyList.getOrDefault(p1.getUrl(), Set.of()).size();
+                        int linksP2 = adjacencyList.getOrDefault(p2.getUrl(), Set.of()).size();
+                        return Integer.compare(linksP1, linksP2);
+                    });
+
+                    // 🔎 Só para debug:
+                    for (PageInfo p : results) {
+                        int inlinks = adjacencyList.getOrDefault(p.getUrl(), Set.of()).size();
+                        System.out.println("[DEBUG] " + p.getUrl() + " -> " + inlinks + " inlinks");
+                    }
+                }
+
+
                 System.out.println("Search for " + terms + " returned " + results.size() + " results.");
                 return results;
             }
