@@ -34,6 +34,7 @@ public class Cliente {
 
     /**
      * Attempts to add a URL to the Gateway with retry logic.
+     *
      * Retries up to a certain amoun of times if a  BarrelUnavailableException occurs.
      * Stops immediately if a UrlAlreadyIndexedException is thrown.
      *

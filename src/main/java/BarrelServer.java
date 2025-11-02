@@ -3,16 +3,39 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.List;
 
+/**
+ * Server application that initializes and registers a Barrel instance in the RMI registry.
+ *
+ * <p>This server:
+ * <ul>
+ *     <li>Reads configuration from a file (default: {@code config.txt})</li>
+ *     <li>Creates a local RMI registry on the specified port</li>
+ *     <li>Instantiates and binds a {@link Barrel} object</li>
+ *     <li>Notifies all configured Downloaders that the Barrel is available</li>
+ * </ul>
+ *
+ *
+ */
 public class BarrelServer {
+
+
+    private static final int CONFIG_LINE_INDEX = 2;
+    private static final String DEFAULT_CONFIG_FILE = "config.txt";
+
+    /**
+     * Main entry point for the Barrel server.
+     *
+     * Reads configuration, creates the Barrel, registers it in RMI registry, and notifies all Downloaders.
+     *
+     */
     public static void main(String[] args) {
-        String filename = "config.txt";
-        final int CONFIG_LINE_INDEX = 2;
+        String filename = DEFAULT_CONFIG_FILE;
 
         try {
             List<String> parts = FileManipulation.lineSplitter(filename, CONFIG_LINE_INDEX, ";");
 
             if (parts.size() < 3) {
-                System.err.println("Linha " + (CONFIG_LINE_INDEX + 1) + " do ficheiro de configuração está incorreta");
+                System.err.println("Configuration line " + (CONFIG_LINE_INDEX + 1) + " is incomplete");
                 return;
             }
 
@@ -25,37 +48,43 @@ public class BarrelServer {
             String dbPath = barrelName + "_MapDB.db";
             Barrel barrel = new Barrel(dbPath, barrelName);
 
-            // Criar registry local neste porto
             Registry registry = LocateRegistry.createRegistry(port);
 
-            // Registar o objeto remoto
             registry.rebind(barrelName, barrel);
 
-            System.out.println("[BarrelServer] '" + barrelName + "' registado e acessível em " + ip + ":" + port);
+            System.out.println("[BarrelServer] '" + barrelName + "' registered and accessible at " + ip + ":" + port);
 
-            // Notificar TODOS os Downloaders que o Barrel está UP
+            // Notify ALL Downloaders that the Barrel is UP
             notifyAllDownloaders(filename, barrelName);
 
         } catch (FileNotFoundException e) {
-            System.err.println("Erro: ficheiro '" + filename + "' não encontrado!");
-        } catch (IllegalArgumentException e) {
-            System.err.println("Erro: porto inválido no ficheiro de configuração.");
+            System.err.println("Error: configuration file '" + filename + "' not found!");
+        } catch (NumberFormatException e) {
+            System.err.println("Error: invalid port number in configuration file.");
         } catch (Exception e) {
-            System.err.println("Erro inesperado: " + e.getMessage());
+            System.err.println("Unexpected error: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    /**
+     * Notifies all configured Downloaders that a Barrel is available.
+     *
+     * Assumes Downloaders are configured on lines 4 and 5 of the config file.
+     *
+     * @param filename   path to configuration file
+     * @param barrelName name of the Barrel that is now available
+     */
     private static void notifyAllDownloaders(String filename, String barrelName) {
-        // Assumindo que os Downloaders estão nas linhas 4 e 5 do config.txt
-        int[] downloaderLines = {4, 5}; // Ajuste conforme necessário
+        // Assuming Downloaders are on lines 4 and 5 of config.txt
+        int[] downloaderLines = {4, 5}; // Adjust as needed
 
         for (int lineIndex : downloaderLines) {
             try {
                 List<String> downloaderConfig = FileManipulation.lineSplitter(filename, lineIndex, ";");
 
                 if (downloaderConfig.size() < 3) {
-                    System.err.println("[BarrelServer] Configuração do Downloader na linha " + (lineIndex + 1) + " incompleta");
+                    System.err.println("[BarrelServer] Downloader configuration on line " + (lineIndex + 1) + " is incomplete");
                     continue;
                 }
 
@@ -67,10 +96,12 @@ public class BarrelServer {
                 DownloaderIndex downloader = (DownloaderIndex) downloaderRegistry.lookup(downloaderName);
 
                 downloader.notifyBarrelUp(barrelName);
-                System.out.println("[BarrelServer] Downloader '" + downloaderName + "' notificado: " + barrelName + " está UP");
+                System.out.println("[BarrelServer] Downloader '" + downloaderName + "' notified: " + barrelName + " is UP");
 
+            } catch (NumberFormatException e) {
+                System.err.println("[BarrelServer] Invalid port number for Downloader on line " + (lineIndex + 1));
             } catch (Exception e) {
-                System.out.println("[BarrelServer] Não foi possível notificar o Downloader na linha " + (lineIndex + 1) + ": " + e.getMessage());
+                System.out.println("[BarrelServer] Could not notify Downloader on line " + (lineIndex + 1) + ": " + e.getMessage());
             }
         }
     }
