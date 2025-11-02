@@ -97,8 +97,9 @@ public class Cliente {
                 System.out.println("\n--- MENU CLIENTE ---");
                 System.out.println("1. Pesquisar");
                 System.out.println("2. Adicionar URL");
-                System.out.println("3. Ver estatísticas");
-                System.out.println("4. Sair");
+                System.out.println("3. Pesquisa por inlink");
+                System.out.println("4. Ver estatísticas");
+                System.out.println("5. Sair");
                 System.out.print("Escolha: ");
 
                 int opcao;
@@ -109,8 +110,8 @@ public class Cliente {
                     continue;
                 }
 
-                if (opcao < 1 || opcao > 4) {
-                    System.err.println("Erro: Opção fora do intervalo (1-4). Tente novamente.");
+                if (opcao < 1 || opcao > 5) {
+                    System.err.println("Erro: Opção fora do intervalo (1-5). Tente novamente.");
                     continue;
                 }
 
@@ -186,8 +187,33 @@ public class Cliente {
                     } catch (Exception e) {
                         System.err.println("Erro ao adicionar URL: " + e.getMessage());
                     }
-
                 } else if (opcao == 3) {
+                    // === CONSULTAR INLINKS ===
+                    System.out.print("Digite a URL a qual quer ver as páginas que apontam para ela: ");
+                    String url = sc.nextLine().trim();
+                    if (url.isEmpty()) {
+                        System.err.println("Erro: A URL não pode estar vazia.");
+                        continue;
+                    }
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        System.err.println("Aviso: A URL deve começar com 'http://' ou 'https://'.");
+                        continue;
+                    }
+
+                    try {
+                        List<String> inlinks = gateway.searchInlinks(url);
+                        if (inlinks.isEmpty()) {
+                            System.out.println("Nenhuma página conhecida aponta para esta URL.");
+                        } else {
+                            System.out.println("Páginas que apontam para " + url + ":\n");
+                            for (String link : inlinks) {
+                                System.out.println(" - " + link);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Erro ao obter inlinks: " + e.getMessage());
+                    }
+                } else if (opcao ==4) {
                     try {
                         SystemStats stats = gateway.getSystemStats();
 
@@ -204,8 +230,7 @@ public class Cliente {
                     } catch (Exception e) {
                         System.err.println("Erro ao obter estatísticas: " + e.getMessage());
                     }
-
-                } else if (opcao == 4) {
+                } else if (opcao == 5) {
                     System.out.println("A sair...");
                     break;
                 }

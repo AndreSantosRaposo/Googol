@@ -274,4 +274,35 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             }
         }
     }
+    public List<String> searchInlinks(String url) throws RemoteException {
+        List<String> inlinks = new ArrayList<>();
+
+        // tenta reconectar se necessário
+        if (barrel1 == null) reconnectBarrel1();
+        if (barrel2 == null) reconnectBarrel2();
+
+        try {
+            if (nextBarrel == 1 && barrel1 != null) {
+                inlinks.addAll(barrel1.getInLinks(url));
+                nextBarrel = 2; // alterna
+            } else if (nextBarrel == 2 && barrel2 != null) {
+                inlinks.addAll(barrel2.getInLinks(url));
+                nextBarrel = 1;
+            } else if (barrel1 != null) {
+                inlinks.addAll(barrel1.getInLinks(url));
+                nextBarrel = 2;
+            } else if (barrel2 != null) {
+                inlinks.addAll(barrel2.getInLinks(url));
+                nextBarrel = 1;
+            } else {
+                throw new RemoteException("Nenhum Barrel disponível para consultar inlinks.");
+            }
+
+        } catch (Exception e) {
+            System.err.println("[Gateway] Erro ao obter inlinks: " + e.getMessage());
+        }
+
+        return inlinks;
+    }
+
 }

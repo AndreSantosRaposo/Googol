@@ -32,4 +32,7 @@ public interface GatewayInterface extends Remote {
     void addUrl(String url) throws RemoteException;
 
     SystemStats getSystemStats() throws RemoteException;
+
+    List<String> searchInlinks(String url) throws RemoteException;
+
 }

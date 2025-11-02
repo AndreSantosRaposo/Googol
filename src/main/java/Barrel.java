@@ -635,13 +635,14 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                     results.sort((p1, p2) -> {
                         int linksP1 = adjacencyList.getOrDefault(p1.getUrl(), Set.of()).size();
                         int linksP2 = adjacencyList.getOrDefault(p2.getUrl(), Set.of()).size();
-                        return Integer.compare(linksP1, linksP2);
+                        return Integer.compare(linksP2, linksP1);
                     });
 
-                    // 🔎 Só para debug:
-                    for (PageInfo p : results) {
-                        int inlinks = adjacencyList.getOrDefault(p.getUrl(), Set.of()).size();
-                        System.out.println("[DEBUG] " + p.getUrl() + " -> " + inlinks + " inlinks");
+                    if (DebugConfig.DEBUG_Inlinks) {
+                        for (PageInfo p : results) {
+                            int inlinks = adjacencyList.getOrDefault(p.getUrl(), Set.of()).size();
+                            System.out.println("[DEBUG] " + p.getUrl() + " -> " + inlinks + " inlinks");
+                        }
                     }
                 }
 
@@ -651,6 +652,8 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             }
         }
     }
+
+
 
     private void checkForMissingMessages(int receivedSeqNumber, String nome, String ip, Integer port) {
         synchronized (messageLock) {
@@ -717,10 +720,21 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
             if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
                 System.out.println("[DEBUG] Seq numbers reset for: " + gatewayName + "in Barrel: " + registryName);
             }
+
+
+
         } catch (Exception e) {
             System.err.println("[" + registryName + "] Erro ao fazer reset: " + e.getMessage());
             throw new RemoteException("Erro no reset de seqNumbers", e);
         }
     }
+
+    public List<String> getInLinks(String url) throws RemoteException {
+        synchronized (adjacencyLock) {
+            Set<String> inlinks = adjacencyList.getOrDefault(url, Set.of());
+            return new ArrayList<>(inlinks);
+        }
+    }
+
 
 }
