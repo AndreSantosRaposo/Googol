@@ -30,7 +30,17 @@ Barrel é o componente que possui as estruturas de armazenamenteo:
 - Ver Javadoc detalhado em `Downloader.java`
 
 
-# Falta gateway e cliente ,etc..
+#### Gateway (gatewayServer.java)
+- **Responsabilidade**: Atuar como mediador entre os pedidos do cliente e as funçoes dos barrels
+- **Comunicação**: RMI com barrels (Round- Robin)
+- Ver Javadoc detalhado em `cliente.java`
+
+
+#### Cliente (cliente.java)
+- **Responsabilidade**: gerir interação com o user
+- **Comunicação**: RMI com Gateway
+- **Confiabilidade**: Sistema de retry para conexao com gateway
+- Ver Javadoc detalhado em `cliente.java`
 
 ## 2. Replicação e Multicast Fiável
 
@@ -52,7 +62,8 @@ Caso um downaloder crashe, ao reiniciar este irá começar a enviar mensagens co
 ### 2.2 Sincronização entre Barrels
 Um barrel assim que inicia contacta os outros barrels ativos para sincronizar o seu estado, através do método, que copia os dados dos outros barrels para o novo barrel. Caso não existam barrels ativos, o barrel lê os seus próprios ficheiros.
 
-## 3. Componente RPC/RMI AIND ANAO FIZ
+### 3. Componente 
+É dado acesso a um ficheiro config.txt a todos os componentes com o nome do objeto remoto, o ip e o porto do servidor rmi de todos os integrantes do sistema, a partir dele sempre que uma componente precisa de se comunicar com outra é o ficheiro é lido e as informações tratadas de forma a ser possivel os comandos rmi como lookup e rebind etc..
 
 ### 3.3 Failover
 #### Mecanismo:
