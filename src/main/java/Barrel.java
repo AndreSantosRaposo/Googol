@@ -23,6 +23,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     int expectedInsertionsBloomFilter = 100000;
     double fpp = 0.01;
 
+    // No topo da classe Barrel
+    private SystemStats stats;
+    private List<Long> responseTimes;
 
     Queue<String> urlQueue;
     ConcurrentMap<String, Set<String>> adjacencyList;
@@ -62,11 +65,14 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         // No construtor (antes de askForInfo)
         invertedIndex = new ConcurrentHashMap<>();
 
+        this.stats = new SystemStats();
+        this.responseTimes = Collections.synchronizedList(new ArrayList<>());
+
         askForInfo();
         semaforo = 1;
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("🛑 Shutdown detetado...");
+            System.out.println("Shutdown detetado...");
             shutdown();
         }));
     }
@@ -237,6 +243,23 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         }
     }
 
+    public SystemStats getStats() throws RemoteException {
+        // Atualizar métricas antes de retornar
+        int indexSize = pagesInfo.size();
+        long avgTime = calculateAvgResponseTime();
+        stats.updateBarrelMetrics(registryName, indexSize, avgTime);
+        return stats;
+    }
+
+    // Calcular tempo médio
+    private long calculateAvgResponseTime() {
+        if (responseTimes.isEmpty()) return 0;
+        return (long) responseTimes.stream()
+                .mapToLong(Long::longValue)
+                .average()
+                .orElse(0.0);
+    }
+
     public void receiveMessage(int seqNumber, PageInfo page, List<String> urls, String nome, String ip, Integer port) throws RemoteException {
         if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
             if (Math.random() > probabilidadeTempDownlaoder) {
@@ -401,28 +424,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         return urlAdded;
     }
 
-
-    private void checkForMissingUrls(int receivedSeqNumber, String nome, String ip, Integer port) {
-        int expectedSeqNumber;
-        Set<Integer> received;
-
-        synchronized (messageLock) {
-            expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
-            received = new HashSet<>(receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>()));
-        }
-
-        // Verificar lacunas
-        if (receivedSeqNumber > expectedSeqNumber) {
-            System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + receivedSeqNumber);
-
-            for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
-                if (!received.contains(missing)) {
-                    System.out.println("A pedir reenvio da URL com seqNumber: " + missing);
-                    requestMissingUrl(missing, nome, ip, port);
-                }
-            }
-        }
-    }
 
     private void requestMissingUrl(int missingSeqNumber, String nome, String ip, Integer port) {
         try {
@@ -607,45 +608,39 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     // Substituir searchPages() para usar o índice invertido:
     public List<PageInfo> searchPages(List<String> terms) throws RemoteException {
+        long startTime = System.currentTimeMillis();
+
         if (terms == null || terms.isEmpty()) return new ArrayList<>();
 
         synchronized (invertedIndexLock) {
             synchronized (pageInfoLock) {
-                // Obter URLs que contêm o primeiro termo
                 Set<String> resultUrls = new HashSet<>(
                         invertedIndex.getOrDefault(terms.get(0).toLowerCase(), Collections.emptySet())
                 );
 
-                // Interseção com URLs dos restantes termos
                 for (int i = 1; i < terms.size(); i++) {
                     Set<String> termUrls = invertedIndex.getOrDefault(terms.get(i).toLowerCase(), Collections.emptySet());
                     resultUrls.retainAll(termUrls);
-                    if (resultUrls.isEmpty()) break; // otimização
+                    if (resultUrls.isEmpty()) break;
                 }
 
-                // Converter URLs para PageInfo
                 List<PageInfo> results = new ArrayList<>();
                 for (String url : resultUrls) {
                     PageInfo page = pagesInfo.get(url);
                     if (page != null) results.add(page);
                 }
 
-                /*====ORDENAR POR MAIS INLINKS*/
                 synchronized (adjacencyLock) {
                     results.sort((p1, p2) -> {
                         int linksP1 = adjacencyList.getOrDefault(p1.getUrl(), Set.of()).size();
                         int linksP2 = adjacencyList.getOrDefault(p2.getUrl(), Set.of()).size();
                         return Integer.compare(linksP2, linksP1);
                     });
-
-                    if (DebugConfig.DEBUG_Inlinks) {
-                        for (PageInfo p : results) {
-                            int inlinks = adjacencyList.getOrDefault(p.getUrl(), Set.of()).size();
-                            System.out.println("[DEBUG] " + p.getUrl() + " -> " + inlinks + " inlinks");
-                        }
-                    }
                 }
 
+                // **ADICIONAR ESTAS LINHAS**
+                long duration = System.currentTimeMillis() - startTime;
+                responseTimes.add(duration);
 
                 System.out.println("Search for " + terms + " returned " + results.size() + " results.");
                 return results;
