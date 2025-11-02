@@ -18,6 +18,9 @@ public class DebugConfig {
     public static boolean DEBUG_DOWNLOADER_SLEEP = false;
     public static boolean DEBUG_CLAIMS = false;
     public static boolean DEBUG_DOWNLOADER = true;
+    public static boolean DEBUG_Inlinks = true;
+
+
 
     // Ativar/desativar todos os debugs de uma vez
     public static boolean DEBUG_ALL = false;
