@@ -37,7 +37,7 @@ public class Cliente {
         for (int tentativa = 1; tentativa <= maxRetries; tentativa++) {
             try {
                 gateway.addUrl(url);
-                System.out.println("✅ URL adicionada com sucesso!");
+                System.out.println(" URL adicionada com sucesso!");
                 return true;
             } catch (Exception e) {
                 Throwable causa = e.getCause();
@@ -45,10 +45,10 @@ public class Cliente {
                     System.err.println("⚠️ " + causa.getMessage());
                     return false;
                 }
-                System.err.println("⚠️ Tentativa " + tentativa + " falhou: " + e.getMessage());
+                System.err.println(" Tentativa " + tentativa + " falhou: " + e.getMessage());
             }
         }
-        System.err.println("❌ Não foi possível adicionar a URL após " + maxRetries + " tentativas.");
+        System.err.println("Não foi possível adicionar a URL após " + maxRetries + " tentativas.");
         return false;
     }
 
