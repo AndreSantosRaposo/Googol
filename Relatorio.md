@@ -35,6 +35,7 @@ Downloader possui as seguintes estruturas:
 - **Barrel Connection Pool**: Conjunto de conexões RMI para os Barrels ativos, com gestão de failover
 - **Current Barrel Index**: Índice para round-robin na obtenção de URLs
 
+<<<<<<< HEAD
 #### Gateway (GatewayServer.java)
 - **Responsabilidade**: Ponto de entrada único para clientes, coordenação de consultas
 - **Comunicação**:
@@ -93,6 +94,7 @@ Um Barrel ao iniciar:
 2. Copia dados através do método:
 3. Caso não existam Barrels ativos, lê os seus próprios ficheiros persistidos (MapDB)
 
+<<<<<<< HEAD
 
 ## 3. Componente RPC/RMI
 
