@@ -15,6 +15,55 @@ public class Cliente {
         }
     }
 
+    private static boolean adicionarUrlComRetry(GatewayInterface gateway, String url, int maxRetries, int delayMs) {
+        for (int tentativa = 1; tentativa <= maxRetries; tentativa++) {
+            try {
+                if (DebugConfig.DEBUG_URL_INDEXAR) {
+                    System.out.println("[DEBUG]: Tentativa " + tentativa + "/" + maxRetries + " de adicionar URL: " + url);
+                }
+
+                gateway.addUrl(url);
+                System.out.println("✅ URL adicionada com sucesso!");
+                return true;
+
+            } catch (Exception e) {
+                // Obter a causa raiz (exceção original do servidor)
+                Throwable causa = e.getCause();
+
+                // Verificar se é UrlAlreadyIndexedException
+                if (causa instanceof UrlAlreadyIndexedException) {
+                    System.err.println("⚠️ " + causa.getMessage());
+                    return false;
+                }
+
+                // Verificar se é BarrelUnavailableException
+                if (causa instanceof BarrelUnavailableException) {
+                    if (tentativa < maxRetries) {
+                        System.err.println("⚠️ Tentativa " + tentativa + " falhou: " + causa.getMessage());
+                        System.out.println("🔄 A tentar novamente em " + delayMs + "ms...");
+
+                        try {
+                            Thread.sleep(delayMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return false;
+                        }
+                    } else {
+                        System.err.println("❌ Todas as " + maxRetries + " tentativas falharam: " + causa.getMessage());
+                        return false;
+                    }
+                } else {
+                    // Outro erro desconhecido
+                    System.err.println("❌ Erro inesperado: " + e.getMessage());
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
     public static void main(String[] args) {
 
         String filename = "config.txt";
@@ -132,8 +181,7 @@ public class Cliente {
                         if (DebugConfig.DEBUG_URL_INDEXAR) {
                             System.out.println("[DEBUG]: A adicionar URL " + url + " para indexação.");
                         }
-                        gateway.addUrl(url);
-                        System.out.println("URL adicionada com sucesso!");
+                        adicionarUrlComRetry(gateway, url, 3, 2000);
                     } catch (Exception e) {
                         System.err.println("Erro ao adicionar URL: " + e.getMessage());
                     }

@@ -46,7 +46,9 @@ public class DownloaderServer {
             while (true) {
                 try {
                     downloader.processNextUrl();
-                    Thread.sleep(3000);
+                    if((DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_DOWNLOADER || DebugConfig.DEBUG_ALL) && DebugConfig.DEBUG_DOWNLOADER_SLEEP) {
+                        Thread.sleep(2000);
+                    }
                 } catch (Exception e) {
                     System.err.println("[Downloader] Erro durante o ciclo: " + e.getMessage());
                     Thread.sleep(2000);

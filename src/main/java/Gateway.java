@@ -128,15 +128,15 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
         }
 
         boolean algumSucesso = false;
+        boolean barrel1Disponivel = false;
+        boolean barrel2Disponivel = false;
 
-        // Guardar no histórico ANTES de enviar
         urlHistory.put(currentSeqNumber, url);
 
-        // Tenta reconectar se necessário
         if (barrel1 == null) reconnectBarrel1();
-        //if (barrel2 == null) reconnectBarrel2();
 
         if (barrel1 != null) {
+            barrel1Disponivel = true;
             try {
                 boolean adicionado1 = barrel1.addUrlToQueue(url, currentSeqNumber, name, gatewayIp, gatewayPort);
                 if (DebugConfig.DEBUG_URL_INDEXAR) {
@@ -146,12 +146,14 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             } catch (Exception e) {
                 System.err.println("Erro ao adicionar ao Barrel1: " + e.getMessage());
                 barrel1 = null;
+                barrel1Disponivel = false;
             }
         } else {
             System.err.println("Barrel1 não disponível");
         }
 
         if (barrel2 != null) {
+            barrel2Disponivel = true;
             try {
                 boolean adicionado2 = barrel2.addUrlToQueue(url, currentSeqNumber, name, gatewayIp, gatewayPort);
                 if (DebugConfig.DEBUG_URL_INDEXAR) {
@@ -161,18 +163,24 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
             } catch (Exception e) {
                 System.err.println("Erro ao adicionar ao Barrel2: " + e.getMessage());
                 barrel2 = null;
+                barrel2Disponivel = false;
             }
         } else {
             System.err.println("Barrel2 não disponível");
         }
 
-        // Incrementar DEPOIS de enviar
         currentSeqNumber++;
 
+        if (!barrel1Disponivel && !barrel2Disponivel) {
+            throw new BarrelUnavailableException("Nenhum Barrel disponível no momento.");
+        }
+
         if (!algumSucesso) {
-            throw new RemoteException("Nenhum Barrel disponível para indexar: " + url);
+            throw new UrlAlreadyIndexedException("URL não aceite pelos Barrels (possivelmente já indexada).");
         }
     }
+
+
 
     public void reSendURL(int missingSeqNumber, BarrelIndex receiver) throws RemoteException {
         if (DebugConfig.DEBUG_MULTICAST_GATEWAY || DebugConfig.DEBUG_ALL) {

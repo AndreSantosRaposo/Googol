@@ -43,7 +43,12 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
 
         try {
             Registry reg = LocateRegistry.getRegistry((String) info[0], (int) info[1]);
-            info[2] = (BarrelIndex) reg.lookup(barrelName);
+            BarrelIndex barrel = (BarrelIndex) reg.lookup(barrelName);
+            info[2] = barrel;
+
+            // **ADICIONAR ESTA LINHA**
+            barrel.resetSeqNumbers(name);
+
             System.out.println("[Downloader] Conectado ao: " + barrelName + " IP: " + info[0] + " PORTA: " + info[1]);
         } catch (Exception e) {
             System.out.println("[Downloader] " + barrelName + " ainda não disponível: " + e.getMessage());
@@ -54,6 +59,15 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
     public synchronized void notifyBarrelUp(String barrelName) throws RemoteException {
         System.out.println("[Downloader] Recebida notificação: " + barrelName + " está UP");
         connectToBarrel(barrelName);
+
+        Object[] info = barrels.get(barrelName);
+        if (info != null && info[2] != null) {
+            try {
+                ((BarrelIndex) info[2]).resetSeqNumbers(name);
+            } catch (RemoteException e) {
+                System.err.println("[Downloader] Erro ao resetar seqNumbers: " + e.getMessage());
+            }
+        }
     }
 
     public void processNextUrl() throws Exception {

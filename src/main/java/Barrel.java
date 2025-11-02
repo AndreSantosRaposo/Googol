@@ -241,49 +241,53 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
             if (Math.random() > probabilidadeTempDownlaoder) {
                 System.out.println("[DEBUG]: Mensagem falhou a ser entregue (seqNumber: " + seqNumber + ")");
-                probabilidadeTempDownlaoder += 0.5; // diminuir probabilidade de falha na próxima
+                probabilidadeTempDownlaoder += 0.5;
                 return;
             }
         }
-        synchronized (messageLock){
-            // garantir estruturas
+
+        List<Integer> missingSeqNumbers = new ArrayList<>();
+
+        synchronized (messageLock) {
             Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
             expectedSeqNumbers.computeIfAbsent(nome, k -> 0);
 
-            // ignorar duplicados
             if (received.contains(seqNumber)) {
-                if(DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL){
+                if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
                     System.out.println("[DEBUG] Mensagem duplicada recebida com seqNumber: " + seqNumber + ". Ignorada.");
                 }
                 return;
             }
 
-            // detetar lacunas antes de qualquer retorno
-            checkForMissingMessages(seqNumber, nome, ip,port);
-
-            // aplicar efeitos
-            addPageInfo(page);
-            Integer i=0;
-            for (String link : urls) {
-                while(i<10){
-                if (DebugConfig.DEBUG_URL) {
-                    System.out.println("[DEBUG]Scraping link: " + link);
-                    i++;
-
-                }}
-                addAdjacency(page.getUrl(),link);
-                addUrlToQueue(link);
+            // Detetar lacunas (APENAS guardar)
+            int expectedSeqNumber = expectedSeqNumbers.get(nome);
+            if (seqNumber > expectedSeqNumber) {
+                System.out.println("Detetada falha! Esperava " + expectedSeqNumber + ", recebi " + seqNumber);
+                for (int missing = expectedSeqNumber; missing < seqNumber; missing++) {
+                    if (!received.contains(missing)) {
+                        missingSeqNumbers.add(missing);
+                    }
+                }
             }
 
-            // marcar como recebido (mesmo Set guardado no mapa)
             received.add(seqNumber);
-
-            // avançar expected apenas enquanto houver sequência contígua recebida
-            int e = expectedSeqNumbers.get(nome);
+            int e = expectedSeqNumber;
             while (received.contains(e)) e++;
             expectedSeqNumbers.put(nome, e);
-
             System.out.println("Mensagem aplicada com seqNumber: " + seqNumber + " (expected agora=" + e + ")");
+        }
+
+        // PEDIR REENVIOS FORA DO LOCK
+        for (int missing : missingSeqNumbers) {
+            System.out.println("A pedir reenvio da mensagem com seqNumber: " + missing);
+            new Thread(() -> requestMissingMessage(missing, nome, ip, port)).start();
+        }
+
+        // Aplicar efeitos (sem lock de message)
+        addPageInfo(page);
+        for (String link : urls) {
+            addAdjacency(page.getUrl(), link);
+            addUrlToQueue(link);
         }
     }
 
@@ -308,9 +312,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     public boolean addUrlToQueue(String url) throws RemoteException {
             synchronized (filterLock) {
                 if (mightContain(url)) {
-                    if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_ALL) {
-                        System.out.println("[DEBUG]: URL já indexada, não adicionada à fila: " + url);
-                    }
+                    System.out.println("[DEBUG]: URL já indexada, não adicionada à fila: " + url);
                     return false;
                 }
             }
@@ -318,9 +320,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         synchronized (queueLock) {
             urlQueue.add(url);
             addToBloomFilter(url);
-            if(DebugConfig.DEBUG_URL_INDEXAR) {
-                System.out.println("[DEBUG]: URL adicionada à fila: " + url);
-            }
+            System.out.println("[DEBUG]: URL adicionada à fila: " + url);
         }
 
         return true;
@@ -330,7 +330,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         // 1. Simular perda de mensagens (DEBUG)
         if (DebugConfig.DEBUG_MULTICAST_DOWNLOADER || DebugConfig.DEBUG_ALL) {
             if (Math.random() > probabilidadeTemp) {
-                System.out.println("[DEBUG]: Mensagem falhou a ser entregue (seqNumber: " + seqNumber + ")");
+                System.out.println("[DEBUG]: URL falhou a ser entregue (seqNumber: " + seqNumber + ")");
                 probabilidadeTemp += 0.5; // diminuir probabilidade de falha na próxima
                 return false;
             }
@@ -385,9 +385,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         // 4. Verificar se URL já foi indexada
         synchronized (filterLock) {
             if (mightContain(url)) {
-                if (DebugConfig.DEBUG_URL_INDEXAR || DebugConfig.DEBUG_ALL) {
-                    System.out.println("[DEBUG]: URL já indexada: " + url);
-                }
+                System.out.println("[DEBUG]: URL já indexada: " + url);
             } else {
                 synchronized (queueLock) {
                     urlQueue.add(url);
@@ -501,7 +499,9 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
     private void addToBloomFilter(String url) throws RemoteException{
         synchronized (filterLock){
             filter.put(url);
-            System.out.println("URL added to Bloom filter: " + url);
+            if(DebugConfig.DEBUG_URL_INDEXAR) {
+                System.out.println("[DEBUG]: URL adicionada ao Bloom filter: " + url);
+            }
         }
     }
 
