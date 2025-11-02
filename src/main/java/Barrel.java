@@ -72,7 +72,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         semaforo = 1;
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("🛑 Shutdown detetado...");
+            System.out.println("Shutdown detetado...");
             shutdown();
         }));
     }
@@ -608,23 +608,22 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
     // Substituir searchPages() para usar o índice invertido:
     public List<PageInfo> searchPages(List<String> terms) throws RemoteException {
+        long startTime = System.currentTimeMillis();
+
         if (terms == null || terms.isEmpty()) return new ArrayList<>();
 
         synchronized (invertedIndexLock) {
             synchronized (pageInfoLock) {
-                // Obter URLs que contêm o primeiro termo
                 Set<String> resultUrls = new HashSet<>(
                         invertedIndex.getOrDefault(terms.get(0).toLowerCase(), Collections.emptySet())
                 );
 
-                // Interseção com URLs dos restantes termos
                 for (int i = 1; i < terms.size(); i++) {
                     Set<String> termUrls = invertedIndex.getOrDefault(terms.get(i).toLowerCase(), Collections.emptySet());
                     resultUrls.retainAll(termUrls);
-                    if (resultUrls.isEmpty()) break; // otimização
+                    if (resultUrls.isEmpty()) break;
                 }
 
-                // Converter URLs para PageInfo
                 List<PageInfo> results = new ArrayList<>();
                 for (String url : resultUrls) {
                     PageInfo page = pagesInfo.get(url);
@@ -637,15 +636,11 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
                         int linksP2 = adjacencyList.getOrDefault(p2.getUrl(), Set.of()).size();
                         return Integer.compare(linksP2, linksP1);
                     });
-
-                    if (DebugConfig.DEBUG_Inlinks) {
-                        for (PageInfo p : results) {
-                            int inlinks = adjacencyList.getOrDefault(p.getUrl(), Set.of()).size();
-                            System.out.println("[DEBUG] " + p.getUrl() + " -> " + inlinks + " inlinks");
-                        }
-                    }
                 }
 
+                // **ADICIONAR ESTAS LINHAS**
+                long duration = System.currentTimeMillis() - startTime;
+                responseTimes.add(duration);
 
                 System.out.println("Search for " + terms + " returned " + results.size() + " results.");
                 return results;

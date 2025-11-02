@@ -29,11 +29,20 @@ public class SystemStats implements Serializable {
 
     // ===== BARRELS =====
 
-    public void updateBarrelMetrics(String barrelName, int indexSize, long avgResponseTimeMs) {
-        if (indexSize < 0 || avgResponseTimeMs < 0) {
+    public void updateBarrelMetrics(String barrelName, int indexSize, long responseTime) {
+        if (indexSize < 0 || responseTime < 0) {
             throw new IllegalArgumentException("Valores não podem ser negativos");
         }
-        barrelMetrics.put(barrelName, new BarrelMetrics(indexSize, avgResponseTimeMs));
+
+        barrelMetrics.compute(barrelName, (k, metrics) -> {
+            if (metrics == null) {
+                return new BarrelMetrics(indexSize, responseTime);
+            } else {
+                metrics.updateIndexSize(indexSize);
+                metrics.addResponseTime(responseTime);
+                return metrics;
+            }
+        });
     }
 
     public Map<String, BarrelMetrics> getBarrelMetrics() {
@@ -42,22 +51,35 @@ public class SystemStats implements Serializable {
 
     // Classe interna
     public static class BarrelMetrics implements Serializable {
+        private int indexSize;
+        private final List<Long> responseTimes;
 
-        private final int indexSize;
-        private final long avgResponseTimeMs;
-
-        public BarrelMetrics(int indexSize, long avgResponseTimeMs) {
+        public BarrelMetrics(int indexSize, long responseTime) {
             this.indexSize = indexSize;
-            this.avgResponseTimeMs = avgResponseTimeMs;
+            this.responseTimes = Collections.synchronizedList(new ArrayList<>());
+            this.responseTimes.add(responseTime);
+        }
+
+        public void updateIndexSize(int newSize) { this.indexSize = newSize; }
+
+        public void addResponseTime(long time) {
+            responseTimes.add(time);
         }
 
         public int getIndexSize() { return indexSize; }
-        public long getAvgResponseTimeMs() { return avgResponseTimeMs; }
+
+        public long getAvgResponseTimeMs() {
+            if (responseTimes.isEmpty()) return 0;
+            return (long) responseTimes.stream()
+                    .mapToLong(Long::longValue)
+                    .average()
+                    .orElse(0.0);
+        }
 
         @Override
         public String toString() {
-            return String.format("Tamanho: %d | Tempo médio: %.2f ms",
-                    indexSize, avgResponseTimeMs);
+            return String.format("Tamanho: %d | Tempo médio: %.1f ms",
+                    indexSize, (double) getAvgResponseTimeMs());
         }
     }
 }

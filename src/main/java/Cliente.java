@@ -225,7 +225,7 @@ public class Cliente {
                         System.out.println("\n📦 Barrels Ativos:");
                         stats.getBarrelMetrics().forEach((name, metrics) ->
                                 System.out.printf("  %s - Índice: %d páginas | Tempo médio: %.1f ms\n",
-                                        name, metrics.getIndexSize(), metrics.getAvgResponseTimeMs() / 10.0));
+                                        name, metrics.getIndexSize(), (double)metrics.getAvgResponseTimeMs()));
 
                     } catch (Exception e) {
                         System.err.println("Erro ao obter estatísticas: " + e.getMessage());

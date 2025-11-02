@@ -101,7 +101,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 long startTime = System.currentTimeMillis();
                 results.addAll(barrel1.searchPages(terms));
                 long duration = System.currentTimeMillis() - startTime;
-                System.out.println("Duração da pesquisa no Barrel1: " + duration + " ms");
                 globalStats.updateBarrelMetrics(barrel1Name, barrel1.getPagesInfoMap().size(), duration);
                 nextBarrel = 2;
                 return results;
@@ -109,7 +108,6 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
                 long startTime = System.currentTimeMillis();
                 results.addAll(barrel2.searchPages(terms));
                 long duration = System.currentTimeMillis() - startTime;
-                System.out.println("Duração da pesquisa no Barrel2: " + duration + " ms");
                 globalStats.updateBarrelMetrics(barrel2Name, barrel2.getPagesInfoMap().size(), duration);
                 nextBarrel = 1;
                 return results;
@@ -143,37 +141,28 @@ public class Gateway extends UnicastRemoteObject implements GatewayInterface {
     public SystemStats getSystemStats() throws RemoteException {
         SystemStats combined = new SystemStats();
 
-        // Combinar pesquisas do Gateway
-        globalStats.getTop10Searches().forEach(e ->
-                combined.incrementSearchCount(e.getKey()));
+        // Top 10 pesquisas (ok copiar contagens)
+        globalStats.getTop10Searches().forEach(e -> {
+            for (int i = 0; i < e.getValue(); i++) combined.incrementSearchCount(e.getKey());
+        });
 
-        // **ADICIONAR AS MÉTRICAS JÁ REGISTADAS NO GATEWAY**
-        globalStats.getBarrelMetrics().forEach((name, metrics) ->
-                combined.updateBarrelMetrics(name,
-                        metrics.getIndexSize(),
-                        metrics.getAvgResponseTimeMs()));
-
-        // Obter stats do Barrel1 (caso não estejam no Gateway)
+        // Usar os Barrels como fonte de verdade para tempos médios
         if (barrel1 != null) {
             try {
                 SystemStats b1Stats = barrel1.getStats();
                 b1Stats.getBarrelMetrics().forEach((name, metrics) ->
-                        combined.updateBarrelMetrics(name,
-                                metrics.getIndexSize(),
-                                metrics.getAvgResponseTimeMs()));
+                        combined.updateBarrelMetrics(name, metrics.getIndexSize(), metrics.getAvgResponseTimeMs())
+                );
             } catch (Exception e) {
                 System.err.println("Erro ao obter stats do Barrel1");
             }
         }
-
-        // Obter stats do Barrel2 (caso não estejam no Gateway)
         if (barrel2 != null) {
             try {
                 SystemStats b2Stats = barrel2.getStats();
                 b2Stats.getBarrelMetrics().forEach((name, metrics) ->
-                        combined.updateBarrelMetrics(name,
-                                metrics.getIndexSize(),
-                                metrics.getAvgResponseTimeMs()));
+                        combined.updateBarrelMetrics(name, metrics.getIndexSize(), metrics.getAvgResponseTimeMs())
+                );
             } catch (Exception e) {
                 System.err.println("Erro ao obter stats do Barrel2");
             }
