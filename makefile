@@ -53,3 +53,6 @@ run_gateway: compile
 
 run_client: compile
 	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) Cliente
+
+run_webapp:
+	mvn spring-boot:run

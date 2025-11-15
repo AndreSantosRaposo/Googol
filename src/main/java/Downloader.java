@@ -242,4 +242,46 @@ public class Downloader extends UnicastRemoteObject implements DownloaderIndex {
             System.out.println("Error processing URL: " + e.getMessage());
         }
     }
+
+    public void scrapURL(String url, Set<String> keywords) {
+        try {
+            Document doc = Jsoup.connect(url).get();
+            String pageTitle = doc.title();
+            String doctext = doc.text();
+            List<String> words = new ArrayList<>(List.of(doctext.split(" ")));
+            String[] sentences = doctext.split("\\.");
+            String textSnippet = String.join(".", Arrays.copyOfRange(sentences, 0, Math.min(3, sentences.length))) + ".";
+            PageInfo pageInformation = new PageInfo(pageTitle, url, words, textSnippet);
+
+            List<String> hrefs = doc.select("a[href]")
+                    .stream().map(link -> link.attr("abs:href"))
+                    .filter(link -> !link.isEmpty()).toList();
+
+            for(String word : keywords) {
+                if(words.isEmpty()) break;
+                words.remove(word);
+            }
+
+            if(!words.isEmpty()) return;
+
+            int currentSeq = seqNumber++;
+            historyBuffer.put(currentSeq, new HistoryMessage(pageInformation, hrefs));
+
+            List<BarrelIndex> activeBarrels = getActiveBarrels();
+
+            for (BarrelIndex barrel : activeBarrels) {
+                try {
+                    barrel.receiveMessage(currentSeq, pageInformation, hrefs, name, ip, port);
+                    if (DebugConfig.DEBUG_DOWNLOADER || DebugConfig.DEBUG_ALL) {
+                        System.out.println("[DEBUG] Page sent: " + pageInformation.getTitle() + " with seq=" + currentSeq + " to Barrel from: " + name);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error sending to Barrel: " + e.getMessage());
+                    disconnectBarrel(barrel);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error processing URL: " + e.getMessage());
+        }
+    }
 }
