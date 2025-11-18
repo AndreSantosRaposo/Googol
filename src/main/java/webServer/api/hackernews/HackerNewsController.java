@@ -11,6 +11,7 @@ import java.util.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,14 +21,18 @@ import java.net.URL;
 
 
 
+
+
 @RestController
 public class HackerNewsController {
     private static final Logger logger = LoggerFactory.getLogger(HackerNewsController.class);
 
     @GetMapping("/topstories")
-    private void hackerRankTopStories(@RequestParam List<String> search) {
+    public List<String> topStories(@RequestParam(name = "search") List<String> search, Model model) {
         try{
             URL urlTopStories = URI.create("https://hacker-news.firebaseio.com/v0/topstories.json").toURL();
+            String baseStoryUrl = "https://hacker-news.firebaseio.com/v0/item/%s.json";
+
             HttpURLConnection connection = (HttpURLConnection) urlTopStories.openConnection();
             connection.setRequestProperty("Accept", "application/json");
             connection.setRequestMethod("GET");
@@ -49,13 +54,35 @@ public class HackerNewsController {
             logger.info("Successfully retrieved top stories with " + ids.length + " IDs.");
             System.out.println("Successfully retrieved top stories with " + ids.length + " IDs.");
 
+            List<String> linksToIndex = new ArrayList<>();
+
+            // Check if story has search terms
             for(int id : ids) {
-                System.out.println("Story ID: " + id);
+                String storyURL = String.format(baseStoryUrl,id);
+                URL urlStory =  URI.create(storyURL).toURL();
+                connection = (HttpURLConnection) urlStory.openConnection();
+                if (connection.getResponseCode() >= 300) {
+                    debug(connection);
+                }
+                is = connection.getInputStream();
+                json = new String(is.readAllBytes());
+                HackerNewsItemRecord story = mapper.readValue(json, HackerNewsItemRecord.class);
+
+
+                boolean hasTerms = true;
+                for(String term:search){
+                    if(!hasTerms){
+                        break;
+                    }
+                    //Verify if has text and text has trrms
+                    hasTerms = (story.text() != null && story.text().toLowerCase().contains(term.toLowerCase()));
+                }
+                if(hasTerms){
+                    linksToIndex.add(story.url());
+                }
             }
 
-            //================================ FAER PARTE DE VERIFICAR SE TEM PALAVRAS ================================//
-
-
+            return linksToIndex;
 
         }catch (MalformedURLException e){
             logger.error("Malformed URL Exception: " + e.getMessage());
@@ -63,7 +90,7 @@ public class HackerNewsController {
             logger.error("General Exception: " + e.getMessage());
         }
 
-
+        return new ArrayList<>();
     }
 
     private void debug(HttpURLConnection connection) throws IOException {

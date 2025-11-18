@@ -12,6 +12,7 @@ public class DebugConfig {
     public static boolean DEBUG_MULTICAST_DOWNLOADER = true;
     public static boolean DEBUG_DOWNLOADER_SLEEP = false;
     public static boolean DEBUG_DOWNLOADER = true;
+    public static boolean DEBUG_HACKER_NEWS = true;
 
 
     // Ativar/desativar todos os debugs de uma vez

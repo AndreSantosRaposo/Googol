@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados pesquisa</title>
+</head>
+<body>
+    <h1>Resultados da Pesquisa</h1>
+    <div>
+        <h2>Termos pesquisados:</h2>
+        <ul>
+            <li th:each="term:${terms}" th:text="${term}"></li>
+        </ul>
+    </div>
+    <div>
+        <h2>Resultados:</h2>
+        <ul>
+            <li th:each="resultado:${resultados}" th:text="${resultado}"></li>
+        </ul>
+        <h3>Análise: </h3>
+        <p th:text="${analise}"></p>
+    </div>
+        <form th:action="@{/topstories}" method="GET">
+            <input type="hidden" name="search" th:each="term : ${terms}" th:value="${term}" />
+            <p>Deseja indexar os termos nas top stories do Hacker News?</p>
+            <button>Pesquisar</button>
+        </form>
+
+</body>
+</html>
