@@ -62,3 +62,5 @@ hs_err_pid*
 
 config.txt
 *.wal.*
+
+config.properties
