@@ -1,3 +1,4 @@
+package webServer;
 import java.io.FileNotFoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;

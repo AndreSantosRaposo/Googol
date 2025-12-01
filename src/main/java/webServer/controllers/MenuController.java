@@ -15,6 +15,12 @@ import java.util.Properties;
 @Controller
 public class MenuController {
 
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/menu";  // Redireciona para o menu
+
+    }
+
     @GetMapping("/menu")
     public String showMenu() {
         return "mainMenu";

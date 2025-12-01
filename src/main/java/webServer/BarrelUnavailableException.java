@@ -1,3 +1,4 @@
+package webServer;
 import java.rmi.RemoteException;
 
 /**

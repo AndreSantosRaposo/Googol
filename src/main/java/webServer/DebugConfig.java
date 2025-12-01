@@ -2,6 +2,7 @@
  * Centralized configuration for all the aplication debug flags.
  * This class provides boolean flags to enable/disable debug prints
  */
+package webServer;
 public class DebugConfig {
 
     // Flags de debug por categoria

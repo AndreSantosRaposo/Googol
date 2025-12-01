@@ -1,3 +1,4 @@
+package webServer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import java.rmi.RemoteException;
