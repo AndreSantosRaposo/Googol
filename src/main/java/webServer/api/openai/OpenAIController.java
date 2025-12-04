@@ -59,34 +59,4 @@ public class OpenAIController {
             throw new RuntimeException(e);
         }
     }
-
-
-//    @GetMapping("/analysis")
-//    public void getOpenAIAnalysis(){
-//
-//        String jsonPayload =
-//                "{" +
-//                        "\"contents\": [" +
-//                        "{" +
-//                        "\"parts\": [" +
-//                        "{" +
-//                        "\"text\": \"Explain how AI works in a few words\"" +
-//                        "}" +
-//                        "]" +
-//                        "}" +
-//                        "]" +
-//                        "}";
-//
-//        try{
-//            URL geminiUrl = URI.create("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY").toURL();
-//            HttpURLConnection connection = (HttpURLConnection) geminiUrl.openConnection();
-//            connection.setRequestProperty("Accept", "application/json");
-//            connection.setRequestMethod("POST");
-//            connection.setRequestProperty("User-Agent", "SD-Googol");
-//
-//        }catch (Exception e){
-//            System.out.println("Error occured: " + e.getMessage());
-//        }
-//    }
-
 }

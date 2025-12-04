@@ -11,6 +11,7 @@ public interface BarrelIndex extends Remote {
     void addPageInfo(PageInfo pageInfo) throws RemoteException;
     void addAdjacency(String fromUrl, String toUrl) throws RemoteException;
 
+
     // Métodos de obtenção de dados
     ConcurrentMap<String, PageInfo> getPagesInfoMap() throws RemoteException;
     ConcurrentMap<String, Set<String>> getAdjacencyListMap() throws RemoteException;

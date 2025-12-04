@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +17,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import webServer.BarrelIndex;
+import webServer.FileManipulation;
 
 import java.net.URI;
 import java.net.URL;
@@ -43,9 +47,7 @@ public class HackerNewsController {
             }
 
             InputStream is = connection.getInputStream();
-            // Convert InputStream to String
             String json = new String(is.readAllBytes());
-            // Convert JSON string to int[]
             ObjectMapper mapper = new ObjectMapper();
             int[] ids = mapper.readValue(json, int[].class);
 
@@ -56,7 +58,6 @@ public class HackerNewsController {
 
             List<String> linksToIndex = new ArrayList<>();
 
-            // Check if story has search terms
             for(int id : ids) {
                 String storyURL = String.format(baseStoryUrl,id);
                 URL urlStory =  URI.create(storyURL).toURL();
@@ -68,19 +69,20 @@ public class HackerNewsController {
                 json = new String(is.readAllBytes());
                 HackerNewsItemRecord story = mapper.readValue(json, HackerNewsItemRecord.class);
 
-
                 boolean hasTerms = true;
                 for(String term:search){
                     if(!hasTerms){
                         break;
                     }
-                    //Verify if has text and text has trrms
                     hasTerms = (story.text() != null && story.text().toLowerCase().contains(term.toLowerCase()));
                 }
                 if(hasTerms){
                     linksToIndex.add(story.url());
                 }
             }
+
+            // Indexar os links no Barrel
+            indexLinksInBarrel(linksToIndex);
 
             return linksToIndex;
 
@@ -92,6 +94,59 @@ public class HackerNewsController {
 
         return new ArrayList<>();
     }
+
+    private void indexLinksInBarrel(List<String> links) {
+        try {
+            // Ler configuração dos Barrels
+            List<String> barrel1Config = FileManipulation.lineSplitter("config.txt", 2, ";");
+            List<String> barrel2Config = FileManipulation.lineSplitter("config.txt", 3, ";");
+
+            if (barrel1Config.size() < 3 || barrel2Config.size() < 3) {
+                logger.error("Barrel configuration is incomplete");
+                return;
+            }
+
+            // Conectar ao Barrel 1
+            String barrel1Name = barrel1Config.get(0).trim();
+            String barrel1Ip = barrel1Config.get(1).trim();
+            int barrel1Port = Integer.parseInt(barrel1Config.get(2).trim());
+
+            Registry registry1 = LocateRegistry.getRegistry(barrel1Ip, barrel1Port);
+            BarrelIndex barrel1 = (BarrelIndex) registry1.lookup(barrel1Name);
+
+            // Conectar ao Barrel 2
+            String barrel2Name = barrel2Config.get(0).trim();
+            String barrel2Ip = barrel2Config.get(1).trim();
+            int barrel2Port = Integer.parseInt(barrel2Config.get(2).trim());
+
+            Registry registry2 = LocateRegistry.getRegistry(barrel2Ip, barrel2Port);
+            BarrelIndex barrel2 = (BarrelIndex) registry2.lookup(barrel2Name);
+
+            // Adicionar cada link aos dois Barrels
+            for (String url : links) {
+                if (url != null && !url.isEmpty()) {
+                    try {
+                        barrel1.addUrlToQueue(url,-1,"HackerNews","",0);
+                        logger.info("URL added to Barrel1: " + url);
+                    } catch (Exception e) {
+                        logger.error("Error adding to Barrel1: " + e.getMessage());
+                    }
+
+                    try {
+                        barrel2.addUrlToQueue(url,-1,"HackerNews","",0);
+                        logger.info("URL added to Barrel2: " + url);
+                    } catch (Exception e) {
+                        logger.error("Error adding to Barrel2: " + e.getMessage());
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error indexing links in Barrels: " + e.getMessage());
+        }
+    }
+
+
 
     private void debug(HttpURLConnection connection) throws IOException {
         // This function is used to debug the resulting code from HTTP connections.
