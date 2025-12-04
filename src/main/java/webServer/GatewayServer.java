@@ -59,11 +59,9 @@ public class GatewayServer {
                     gatewayIp, gatewayPort
             );
 
-            // Register Gateway
             try {
                 LocateRegistry.createRegistry(gatewayPort);
             } catch (Exception ignored) {
-                // Registry may already exist
             }
 
             Registry registry = LocateRegistry.getRegistry(gatewayIp, gatewayPort);

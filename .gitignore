@@ -60,7 +60,7 @@ hs_err_pid*
 ### Bloom Filters ###
 *_bloom.bin
 
-config.txt
+src/main/resources/config.txt
 *.wal.*
 
 config.properties
