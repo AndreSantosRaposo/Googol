@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Estatísticas do Sistema</title>
+</head>
+<body>
+
+<h1>Estatísticas do Sistema</h1>
+
+<div>
+    <h2>Top Search Queries:</h2>
+    <ul>
+        <li th:each="entry : ${stats.topQueries}"
+            th:text="${entry.key + ' : ' + entry.value}">
+        </li>
+    </ul>
+</div>
+
+<div>
+    <h2>Tamanho dos Barrels:</h2>
+    <ul>
+        <li th:each="entry : ${stats.barrelSizes}"
+            th:text="${entry.key + ' : ' + entry.value}">
+        </li>
+    </ul>
+</div>
+
+<div>
+    <h2>Tempo médio de resposta:</h2>
+    <p th:text="${stats.avgResponseTime}"></p>
+</div>
+
+<form th:action="@{/menu}" method="GET">
+    <button>Voltar ao Menu</button>
+</form>
+
+</body>
+</html>
