@@ -32,7 +32,7 @@ public class HackerNewsController {
     private static final Logger logger = LoggerFactory.getLogger(HackerNewsController.class);
 
     @GetMapping("/topstories")
-    public List<String> topStories(@RequestParam(name = "search") List<String> search, Model model) {
+    public String topStories(@RequestParam(name = "search") List<String> search, Model model) {
         try{
             URL urlTopStories = URI.create("https://hacker-news.firebaseio.com/v0/topstories.json").toURL();
             String baseStoryUrl = "https://hacker-news.firebaseio.com/v0/item/%s.json";
@@ -90,16 +90,21 @@ public class HackerNewsController {
 
             // Indexar os links no Barrel
             indexLinksInBarrel(linksToIndex);
-
-            return linksToIndex;
+            model.addAttribute("mensagem", "URLs do Hacker News a serem indexadas...");
+            model.addAttribute("tipo", "sucesso");
+            return "mainMenu";
 
         }catch (MalformedURLException e){
             logger.error("Malformed URL Exception: " + e.getMessage());
+            model.addAttribute("mensagem", "Ocorreu um erro: " + e.getMessage());
+            model.addAttribute("tipo", "erro");
         }catch (Exception e){
             logger.error("General Exception: " + e.getMessage());
+            model.addAttribute("mensagem", "Ocorreu um erro: " + e.getMessage());
+            model.addAttribute("tipo", "erro");
         }
 
-        return new ArrayList<>();
+        return "mainMenu";
     }
 
     private void indexLinksInBarrel(List<String> links) {
@@ -170,6 +175,7 @@ public class HackerNewsController {
                     }
                 }
             }
+
 
         } catch (Exception e) {
             logger.error("Error indexing links in Barrels: " + e.getMessage());
