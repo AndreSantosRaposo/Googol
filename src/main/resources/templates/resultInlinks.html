@@ -12,16 +12,14 @@
     <h2>URL pesquisada:</h2>
     <p th:text="${link}"></p>
 </div>
-
 <div>
     <h2>Inlinks encontrados:</h2>
+    <div>
+        <p th:if="${mensagem}" th:text="${mensagem} + ':'"></p>
+    </div>
     <ul>
         <li th:each="in : ${inlinks}" th:text="${in}"></li>
     </ul>
-</div>
-
-<div>
-    <p th:if="${mensagem}" th:text="${mensagem}"></p>
 </div>
 
 <form th:action="@{/menu}" method="GET">
