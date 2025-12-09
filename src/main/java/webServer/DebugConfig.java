@@ -10,7 +10,7 @@ public class DebugConfig {
     public static boolean DEBUG_URL_INDEXAR = true;
     public static boolean DEBUG_FICHEIROS = true;
     public static boolean DEBUG_MULTICAST_GATEWAY = false;
-    public static boolean DEBUG_MULTICAST_DOWNLOADER = true;
+    public static boolean DEBUG_MULTICAST_DOWNLOADER = false;
     public static boolean DEBUG_DOWNLOADER_SLEEP = false;
     public static boolean DEBUG_DOWNLOADER = true;
     public static boolean DEBUG_HACKER_NEWS = true;

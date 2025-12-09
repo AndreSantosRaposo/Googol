@@ -34,25 +34,25 @@ setup_rmi:
 
 # Run components
 run_barrel: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) BarrelServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.BarrelServer
 
 run_barrel1: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) BarrelServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.BarrelServer
 
 run_barrel2: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) BarrelServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.BarrelServer
 
 run_downloader1: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) DownloaderServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.DownloaderServer
 
 run_downloader2: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) DownloaderServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.DownloaderServer
 
 run_gateway: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) GatewayServer
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.GatewayServer
 
 run_client: compile
-	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) Cliente
+	java -cp "$(CP)" -Djava.rmi.server.hostname=$(LOCAL_IP) webServer.Cliente
 
 run_webapp:
 	mvn spring-boot:run

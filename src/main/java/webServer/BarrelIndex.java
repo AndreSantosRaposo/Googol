@@ -8,6 +8,7 @@ public interface BarrelIndex extends Remote {
 
     // Métodos de adicao
     boolean addUrlToQueue(String url, int seqNumber, String nome, String ip, Integer port) throws RemoteException;
+    public boolean addUrlToQueue(String url) throws RemoteException;
     void addPageInfo(PageInfo pageInfo) throws RemoteException;
     void addAdjacency(String fromUrl, String toUrl) throws RemoteException;
 

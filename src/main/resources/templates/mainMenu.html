@@ -2,58 +2,136 @@
 <html lang="pt" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Googol Menu</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
         .mensagem {
-            padding: 10px;
-            margin: 10px 0;
+            padding: 15px;
+            margin-bottom: 25px;
             border-radius: 5px;
+            border-left: 4px solid;
         }
         .sucesso {
             background-color: #d4edda;
-            color: #008c23;
-            border: 1px solid #c3e6cb;
+            color: #155724;
+            border-left-color: #28a745;
         }
         .erro {
             background-color: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
+            border-left-color: #dc3545;
         }
-        #main-menu {
-            max-width: 50%;
-            font-family: Arial, sans-serif;
+        ul {
+            list-style: none;
+        }
+        li {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            li {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="main-menu">
-        <h1>Main Menu</h1>
+<div class="container">
+    <h1>Menu Principal</h1>
 
-        <div th:if="${mensagem}" th:class="'mensagem ' + ${tipo}" th:text="${mensagem}"></div>
+    <div th:if="${mensagem}" th:class="'mensagem ' + ${tipo}" th:text="${mensagem}"></div>
 
-        <ul>
-            <li>
-                <form action="/addUrl" method="post">
-                    <label for="url">Digite o URL que deseja indexar:</label>
-                    <input type="text" id="url" name="url" placeholder="http://exemplo.com" required>
-                    <button type="submit">Indexar URL</button>
-                </form>
-            </li>
-            <li>
-                <form action="/searchTerms" method="POST">
-                    <label for="termos">Digite termos com que deseja fazer a pesquisa:</label>
-                    <input type="text" id="termos" name="termos" placeholder="Exemplo: Batata receita cozinhar" required>
-                    <button type="submit">Fazer pesquisa</button>
-                </form>
-            </li>
-            <li>
-                <form action="/searchInlinks" method="POST">
-                    <label for="link">Digite o URL para ver quais páginas tem ligação:</label>
-                    <input type="text" id="link" name="link" placeholder="http://exemplo.com" required>
-                    <button type="submit">Pesquisar inlinks</button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <ul>
+        <li>
+            <form action="/addUrl" method="post">
+                <label for="url">📎 Digite o URL que deseja indexar:</label>
+                <input type="url" id="url" name="url" placeholder="https://exemplo.com" required>
+                <button type="submit">Indexar URL</button>
+            </form>
+        </li>
+        <li>
+            <form action="/searchTerms" method="POST">
+                <label for="termos">🔎 Digite termos para pesquisa:</label>
+                <input type="text" id="termos" name="termos" placeholder="Ex: Batata receita cozinhar" required>
+                <button type="submit">Fazer Pesquisa</button>
+            </form>
+        </li>
+        <li>
+            <form action="/searchInlinks" method="POST">
+                <label for="link">🔗 Digite o URL para ver inlinks:</label>
+                <input type="url" id="link" name="link" placeholder="https://exemplo.com" required>
+                <button type="submit">Pesquisar Inlinks</button>
+            </form>
+        </li>
+    </ul>
+</div>
 </body>
 </html>
