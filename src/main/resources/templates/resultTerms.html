@@ -194,7 +194,7 @@
     <div class="hacker-news-section">
         <form th:action="@{/topstories}" method="GET">
             <input type="hidden" name="search" th:each="term : ${terms}" th:value="${term}" />
-            <p>💡 Deseja indexar os termos nas top stories do Hacker News?</p>
+            <p>Deseja indexar os termos nas top stories do Hacker News?</p>
             <button>Pesquisar no Hacker News</button>
         </form>
     </div>

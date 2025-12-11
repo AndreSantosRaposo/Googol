@@ -58,35 +58,28 @@ public class HackerNewsController {
 
             List<String> linksToIndex = new ArrayList<>();
 
-//            for(int id : ids) {
-//                String storyURL = String.format(baseStoryUrl,id);
-//                URL urlStory =  URI.create(storyURL).toURL();
-//                connection = (HttpURLConnection) urlStory.openConnection();
-//                if (connection.getResponseCode() >= 300) {
-//                    debug(connection);
-//                }
-//                is = connection.getInputStream();
-//                json = new String(is.readAllBytes());
-//                HackerNewsItemRecord story = mapper.readValue(json, HackerNewsItemRecord.class);
-//
-//                boolean hasTerms = true;
-//                for(String term:search){
-//                    if(!hasTerms){
-//                        break;
-//                    }
-//                    hasTerms = (story.text() != null && story.text().toLowerCase().contains(term.toLowerCase()));
-//                }
-//                if(hasTerms){
-//                    linksToIndex.add(story.url());
-//                }
-//            }
+            for(int id : ids) {
+                String storyURL = String.format(baseStoryUrl,id);
+                URL urlStory =  URI.create(storyURL).toURL();
+                connection = (HttpURLConnection) urlStory.openConnection();
+                if (connection.getResponseCode() >= 300) {
+                    debug(connection);
+                }
+                is = connection.getInputStream();
+                json = new String(is.readAllBytes());
+                HackerNewsItemRecord story = mapper.readValue(json, HackerNewsItemRecord.class);
 
-            // Test only========================================================
-            linksToIndex.add("https://kraa.io/about");
-            linksToIndex.add("https://pbnj.sh/");
-            linksToIndex.add("https://www.wired.com/story/age-verification-is-sweeping-the-us-activists-are-fighting-back/");
-
-
+                boolean hasTerms = true;
+                for(String term:search){
+                    if(!hasTerms){
+                        break;
+                    }
+                    hasTerms = (story.text() != null && story.text().toLowerCase().contains(term.toLowerCase()));
+                }
+                if(hasTerms){
+                    linksToIndex.add(story.url());
+                }
+            }
 
             // Indexar os links no Barrel
             indexLinksInBarrel(linksToIndex);
