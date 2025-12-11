@@ -1,39 +1,238 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Estatísticas do Sistema</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatísticas do Sistema (Tempo Real)</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <style>
+        /* ... (Seu CSS original) ... */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h2 {
+            color: #667eea;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .stats-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        ul {
+            list-style: none;
+            margin: 15px 0;
+        }
+        li {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .metric {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .metric p {
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        #status-bar {
+            background-color: #ffc107;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
+<div class="container">
+    <h1>Estatísticas do Sistema</h1>
 
-<h1>Estatísticas do Sistema</h1>
+    <div id="status-bar">Aguardando Conexão...</div>
+    <div class="stats-card">
+        <h2>Top 10 Pesquisas:</h2>
+        <ul id="top-searches-list">
+            <li>(Aguardando dados...)</li>
+        </ul>
+    </div>
 
-<div>
-    <h2>Top Search Queries:</h2>
-    <ul>
-        <li th:each="entry : ${stats.topQueries}"
-            th:text="${entry.key + ' : ' + entry.value}">
-        </li>
-    </ul>
+    <div class="stats-card">
+        <h2>Tamanho e Tempos de Resposta dos Barrels:</h2>
+        <ul id="barrel-metrics-list">
+            <li>(Aguardando dados...)</li>
+        </ul>
+    </div>
+
+    <form th:action="@{/menu}" method="GET">
+        <button>Voltar ao Menu</button>
+    </form>
 </div>
 
-<div>
-    <h2>Tamanho dos Barrels:</h2>
-    <ul>
-        <li th:each="entry : ${stats.barrelSizes}"
-            th:text="${entry.key + ' : ' + entry.value}">
-        </li>
-    </ul>
-</div>
+<script>
+    let stompClient = null;
 
-<div>
-    <h2>Tempo médio de resposta:</h2>
-    <p th:text="${stats.avgResponseTime}"></p>
-</div>
+    function connect() {
+        let statusElement = document.getElementById('status-bar');
 
-<form th:action="@{/menu}" method="GET">
-    <button>Voltar ao Menu</button>
-</form>
+        let socket = new SockJS('/my-websocket');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log('Connected to STOMP: ' + frame);
+            statusElement.innerText = 'CONECTADO e Recebendo Dados em Tempo Real';
+            statusElement.style.backgroundColor = '#28a745';
+
+            stompClient.subscribe('/topic/stats', function (message) {
+                let stats = JSON.parse(message.body);
+                updateStatsUI(stats);
+            });
+
+        }, function(error) {
+            console.error('STOMP Error:', error);
+            statusElement.innerText = 'ERRO DE CONEXÃO. Tente recarregar.';
+            statusElement.style.backgroundColor = '#dc3545';
+        });
+    }
+
+    function updateStatsUI(stats) {
+        // LINHA REMOVIDA: Remoção do timestamp: document.getElementById('last-update').innerText = 'Última atualização: ' + new Date().toLocaleTimeString();
+
+        // 1. Atualiza Top 10 Searches
+        let topSearchesList = document.getElementById('top-searches-list');
+        topSearchesList.innerHTML = '';
+        if (stats.top10Searches && stats.top10Searches.length > 0) {
+            stats.top10Searches.forEach(entry => {
+                let key = entry.key || ' '; // Se for nulo, usa espaço vazio
+                let value = entry.value || 0;
+
+                // Ignora entradas onde o key é nulo, se houver padding na lista do Gateway
+                if (key.trim() === '') return;
+
+                topSearchesList.innerHTML += `
+                    <li>
+                        <span>${key}</span>
+                        <strong>${value} vezes</strong>
+                    </li>`;
+            });
+        }
+
+        // Garante que a lista não fique vazia se o loop não adicionou nada
+        if (topSearchesList.innerHTML === '') {
+            topSearchesList.innerHTML = '<li>Nenhuma pesquisa registrada.</li>';
+        }
+
+
+        // 2. Métricas dos Barrels (Tamanho e Tempo)
+        let barrelMetricsList = document.getElementById('barrel-metrics-list');
+        barrelMetricsList.innerHTML = '';
+
+        let hasBarrels = false;
+        let totalTime = 0;
+        let barrelCount = 0;
+
+        if (stats.barrelMetrics) {
+            for (const [name, metrics] of Object.entries(stats.barrelMetrics)) {
+                hasBarrels = true;
+                barrelCount++;
+
+                let indexSize = metrics.indexSize || 0;
+                let avgTime = metrics.avgResponseTimeMs || 0;
+
+                totalTime += avgTime;
+
+                barrelMetricsList.innerHTML +=
+                    `<li>
+                        <span>Barrel: <strong>${name}</strong></span>
+                        <span>Índice: <strong>${indexSize} páginas</strong></span>
+                        <span style="color: ${avgTime > 500 ? 'red' : 'green'};">Tempo Médio: <strong>${avgTime} ms</strong></span>
+                    </li>`;
+            }
+        }
+
+        if (!hasBarrels) {
+            barrelMetricsList.innerHTML = '<li>Nenhum Barrel ativo encontrado.</li>';
+        }
+
+        // 3. Adiciona a Média Geral no final da lista de Barrels
+        let systemAvg = barrelCount > 0 ? (totalTime / barrelCount).toFixed(0) : 0;
+
+        if (hasBarrels || barrelCount === 0) {
+            barrelMetricsList.innerHTML +=
+                `<li style="background: #e6e6e6; margin-top: 10px;">
+                    <span>MÉDIA GERAL DE RESPOSTA:</span>
+                    <strong>${systemAvg} ms</strong>
+                 </li>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', connect);
+</script>
 
 </body>
 </html>

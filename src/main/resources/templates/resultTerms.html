@@ -1,30 +1,225 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resultados pesquisa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h2 {
+            color: #667eea;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .terms-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .terms-list li {
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            list-style: none;
+            font-size: 0.9em;
+        }
+        .resultados-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+        .resultados-list li {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+            word-break: break-all;
+        }
+        .resultado-item {
+            padding: 15px !important;
+            margin: 12px 0 !important;
+            background: white !important;
+            border-radius: 8px !important;
+            border-left: 4px solid #667eea !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .resultado-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .resultado-header {
+            margin-bottom: 10px;
+        }
+
+        .resultado-header h4 {
+            color: #333;
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .resultado-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .resultado-url {
+            color: #667eea;
+            font-size: 0.9em;
+            margin: 0;
+            word-break: break-all;
+            font-weight: 500;
+        }
+
+        .resultado-text {
+            color: #666;
+            font-size: 0.95em;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+
+        .analise {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .hacker-news-section {
+            background: #ff6600;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 25px;
+        }
+        .hacker-news-section p {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        button {
+            background: white;
+            color: #ff6600;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .resultado-item {
+                padding: 12px !important;
+            }
+
+            .resultado-header h4 {
+                font-size: 1em;
+            }
+        }
+    </style>
 </head>
 <body>
+<div class="container">
     <h1>Resultados da Pesquisa</h1>
+
     <div>
         <h2>Termos pesquisados:</h2>
-        <ul>
-            <li th:each="term:${terms}" th:text="${term}"></li>
+        <ul class="terms-list">
+            <li th:each="term : ${terms}" th:text="${term}"></li>
         </ul>
     </div>
+
     <div>
         <h2>Resultados:</h2>
-        <ul>
-            <li th:each="resultado:${resultados}" th:text="${resultado}"></li>
+        <ul class="resultados-list">
+            <li th:each="resultado : ${resultados}" class="resultado-item">
+                <div class="resultado-header">
+                    <h4 th:text="${resultado.title}"></h4>
+                </div>
+                <div class="resultado-content">
+                    <p class="resultado-url" th:text="${resultado.url}"></p>
+                    <p class="resultado-text" th:text="${resultado.smallText}"></p>
+                </div>
+            </li>
         </ul>
-        <h3>Análise: </h3>
-        <p th:text="${analise}"></p>
+
+        <h3>Análise:</h3>
+        <p class="analise" th:text="${analise}"></p>
     </div>
+
+    <div class="hacker-news-section">
         <form th:action="@{/topstories}" method="GET">
             <input type="hidden" name="search" th:each="term : ${terms}" th:value="${term}" />
-            <p>Deseja indexar os termos nas top stories do Hacker News?</p>
-            <button>Pesquisar</button>
+            <p>💡 Deseja indexar os termos nas top stories do Hacker News?</p>
+            <button>Pesquisar no Hacker News</button>
         </form>
+    </div>
+    <form th:action="@{/menu}" method="GET">
+        <button>Voltar ao Menu</button>
+    </form>
 
+    <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 20px;">
+
+        <div th:if="${hasPrev}">
+            <form th:action="@{/searchNextPage}" method="GET">
+                <input type="hidden" name="termos" th:value="${termos}" />
+                <input type="hidden" name="page" th:value="${currentPage - 1}" />
+                <button type="submit">Página Anterior</button>
+            </form>
+        </div>
+
+        <div th:if="${hasNext}">
+            <form th:action="@{/searchNextPage}" method="GET">
+                <input type="hidden" name="termos" th:value="${termos}" />
+                <input type="hidden" name="page" th:value="${currentPage + 1}" />
+                <button type="submit">Próxima Página</button>
+            </form>
+        </div>
+    </div>
+</div>
 </body>
 </html>
