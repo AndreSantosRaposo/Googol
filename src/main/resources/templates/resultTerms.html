@@ -201,6 +201,25 @@
     <form th:action="@{/menu}" method="GET">
         <button>Voltar ao Menu</button>
     </form>
+
+    <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 20px;">
+
+        <div th:if="${hasPrev}">
+            <form th:action="@{/searchNextPage}" method="GET">
+                <input type="hidden" name="termos" th:value="${termos}" />
+                <input type="hidden" name="page" th:value="${currentPage - 1}" />
+                <button type="submit">Página Anterior</button>
+            </form>
+        </div>
+
+        <div th:if="${hasNext}">
+            <form th:action="@{/searchNextPage}" method="GET">
+                <input type="hidden" name="termos" th:value="${termos}" />
+                <input type="hidden" name="page" th:value="${currentPage + 1}" />
+                <button type="submit">Próxima Página</button>
+            </form>
+        </div>
+    </div>
 </div>
 </body>
 </html>

@@ -90,6 +90,13 @@
         button:hover {
             background: #5568d3;
         }
+        /* Style specific for the stats button */
+        .stats-button {
+            background: #28a745; /* Green color for distinction */
+        }
+        .stats-button:hover {
+            background: #1e7e34;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -129,6 +136,13 @@
                 <label for="link">🔗 Digite o URL para ver inlinks:</label>
                 <input type="url" id="link" name="link" placeholder="https://exemplo.com" required>
                 <button type="submit">Pesquisar Inlinks</button>
+            </form>
+        </li>
+
+        <li>
+            <form th:action="@{/stats}" method="get">
+                <label>📊 Ver Estatísticas do Sistema:</label>
+                <button type="submit" class="stats-button">Acessar Estatísticas</button>
             </form>
         </li>
     </ul>
