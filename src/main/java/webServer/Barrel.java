@@ -410,6 +410,7 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
         return true;
     }
 
+
     /**
      * Adds a URL to the processing queue with sequence number tracking.
      * Handles duplicate detection and missing message recovery from Gateway.
@@ -744,31 +745,6 @@ public class Barrel extends UnicastRemoteObject implements BarrelIndex {
 
                 System.out.println("Search for " + terms + " returned " + results.size() + " results.");
                 return results;
-            }
-        }
-    }
-
-    /**
-     * Checks for missing messages and initiates recovery.
-     *
-     * @param receivedSeqNumber Received sequence number
-     * @param nome Sender name
-     * @param ip Sender IP
-     * @param port Sender port
-     */
-    private void checkForMissingMessages(int receivedSeqNumber, String nome, String ip, Integer port) {
-        synchronized (messageLock) {
-            int expectedSeqNumber = expectedSeqNumbers.computeIfAbsent(nome, k-> 0);
-            Set<Integer> received = receivedSeqNumbers.computeIfAbsent(nome, k -> new HashSet<>());
-
-            if (receivedSeqNumber > expectedSeqNumber) {
-                System.out.println("Gap detected! Expected " + expectedSeqNumber + ", received " + receivedSeqNumber);
-
-                for (int missing = expectedSeqNumber; missing < receivedSeqNumber; missing++) {
-                    if (!received.contains(missing)) {
-                        requestMissingMessage(missing, nome, ip, port);
-                    }
-                }
             }
         }
     }
