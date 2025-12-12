@@ -94,7 +94,6 @@ Um Barrel ao iniciar:
 2. Copia dados através do método:
 3. Caso não existam Barrels ativos, lê os seus próprios ficheiros persistidos (MapDB)
 
-<<<<<<< HEAD
 
 ## 3. Componente RPC/RMI
 
@@ -198,10 +197,34 @@ Um Barrel ao iniciar:
 - `Barrel.notifyDownloadersUp()` - Broadcast de disponibilidade após inicialização
 - `Gateway.rebindBarrel()` - Reconexão do Gateway aos Barrels
 
-## 4. Distribuição de Tarefas
-Para a distribuição de tarefas foi seguida a sugestão 1 do enunciado, com algumas excepcoes para colaboração mútua
+## 6. WebSocket
+Para a página de estatísticas (/stats), foi implementado um mecanismo de Server Push para garantir que os dados (Top 10 pesquisas e métricas dos Barrels) são atualizados em todos os clientes conectados sem necessidade de refresh.
 
-## 5. Testes Realizados
+### **StatsNotifierService:**
+
+-Serviço injetado no Spring que detém o SimpMessagingTemplate.
+
+-Sempre que ocorre uma ação que altera o estado do sistema (ex: nova pesquisa ou indexação de URL), este serviço invoca o gateway.getSystemStats() via RMI.
+
+-O objeto SystemStats resultante é serializado para JSON e enviado para o tópico /topic/stats.
+
+## 7. Distribuição de Tarefas
+### 7.1 Meta 1
+Para a distribuição de tarefas foi seguida a sugestão 1 do enunciado, com algumas excepcoes para colaboração mútua
+### 7.2 Meta 2
+**Paulo Vilar:**
+  
+1-Implemtnação de WebSocket 
+
+2- Implementação de Comunicação RMI
+
+**André Raposo:**
+
+1-Integração de REST WebServices 
+
+2-Arquitetura geral do projeto FALTA AQUI CENAS, MAS E MELHOR SERES TU
+  
+## 8. Testes Realizados
 
 | Teste                                         | Resultado esperado                                                   | Resultado | Observações                                                                                                            |
 |-----------------------------------------------|----------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------|
@@ -214,7 +237,7 @@ Para a distribuição de tarefas foi seguida a sugestão 1 do enunciado, com alg
 
 
 
-## 7. Como Executar
+## 9. Como Executar
 Para a execução do programa é necessário ter:
 - O Java instalado (versão 11 ou superior)
 - Maven para construção do projeto

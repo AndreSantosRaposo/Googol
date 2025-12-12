@@ -104,7 +104,6 @@ public class MenuController {
         return "mainMenu";
     }
 
-    // MÉTODO ORIGINAL: Inicia a pesquisa (POST), redirecionando para a página 0.
     @PostMapping("/searchTerms")
     public String searchTerms(
             @RequestParam("termos") String termos,
@@ -123,7 +122,6 @@ public class MenuController {
         return showResultsPage(termos, page, model);
     }
 
-    // MÉTODO UNIFICADO: Processa a pesquisa e carrega a página N
     private String showResultsPage(String termos, int currentPage, Model model) {
         try {
             if (gateway == null) connectToGateway();

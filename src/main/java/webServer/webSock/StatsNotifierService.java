@@ -12,6 +12,22 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.List;
 
+
+/**
+ * Serviço responsável por notificar os clientes Web sobre atualizações nas estatísticas do sistema.
+ * <p>
+ * Esta classe atua como uma ponte entre o sistema distribuído (via RMI) e a interface Web (via WebSocket).
+ * Ela mantém uma referência ao Gateway RMI e usa o {@link SimpMessagingTemplate} do Spring para
+ * fazer "Server Push" dos dados para os clientes conectados.
+ * </p>
+ *
+ * Funcionalidades principais:
+ * <ul>
+ * <li>Conexão e reconexão automática ao Gateway RMI.</li>
+ * <li>Obtenção do objeto {@link SystemStats} atualizado.</li>
+ * <li>Envio assíncrono de dados para o tópico "/topic/stats".</li>
+ * </ul>
+ */
 @Service
 public class StatsNotifierService {
 
@@ -25,7 +41,6 @@ public class StatsNotifierService {
     @Autowired
     public StatsNotifierService(SimpMessagingTemplate template) {
         this.template = template;
-        // Tenta conectar APENAS UMA VEZ na inicialização do serviço
         connectToGateway();
     }
 
@@ -43,7 +58,6 @@ public class StatsNotifierService {
 
             System.out.printf("[StatsNotifier] Attempting RMI connection to Gateway '%s' at %s:%d%n", name, ip, port);
 
-            // Conexão via Registry (padrão de consistência do seu projeto)
             Registry registry = LocateRegistry.getRegistry(ip, port);
             gateway = (GatewayInterface) registry.lookup(name);
 
@@ -59,18 +73,18 @@ public class StatsNotifierService {
     }
 
     /**
-     * TAREFA PRINCIPAL: Puxa o SystemStats do Gateway e envia via WebSocket (PUSH).
-     * Chamado apenas por eventos externos.
+     * Obtém as estatísticas do sistema via RMI e envia para os clientes Web via WebSocket.
+     * <p>
+     * Este método é chamado sempre que uma ação relevante ocorre no sistema (ex: nova pesquisa).
+     * </p>
      */
     private void sendPush() {
-        // 1. Verificação de Tolerância a Falhas: Se a referência falhou, tenta reconectar.
         if (gateway == null) {
             connectToGateway();
             if (gateway == null) return;
         }
 
         try {
-            // 2. Ação RMI: Puxa o estado atualizado do sistema.
             SystemStats currentStats = gateway.getSystemStats();
             System.out.println("--- DEBUG STATS NOTIFIER ---");
 
@@ -83,7 +97,7 @@ public class StatsNotifierService {
             System.out.println("TESTE BARREL (OK): " + currentStats.getBarrelMetrics().keySet());
             System.out.println("--- DEBUG STATS NOTIFIER ---");
             // =========================================================
-            // END DEBUG TEMPORÁRIO
+            // END DEBUG
             // =========
             // 3. SERVER PUSH: Envia o objeto JSON para o tópico do WebSocket.
             template.convertAndSend("/topic/stats", currentStats);
@@ -100,7 +114,10 @@ public class StatsNotifierService {
         }
     }
 
-
+    /**
+     * Gatilho público para forçar uma atualização imediata das estatísticas.
+     * Deve ser chamado pelos Controllers quando ocorre uma ação relevante (ex: nova pesquisa).
+     */
 
     public void sendImmediateStatsUpdate() {
         sendPush();

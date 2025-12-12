@@ -9,6 +9,14 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class webSocket implements WebSocketMessageBrokerConfigurer {
 
+    /**
+     * Classe de configuração para o suporte a WebSockets no Spring Boot.
+     * <p>
+     * Habilita um broker de mensagens e configura os endpoints STOMP
+     *  para comunicação em tempo real entre o servidor e os clientes web (browsers).
+     * </p>
+     */
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic");
@@ -17,8 +25,6 @@ public class webSocket implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Endpoint de conexão inicial do cliente, conforme seu código
-        // O cliente se conectará a 'ws://servidor/my-websocket'
         registry.addEndpoint("/my-websocket").withSockJS();
     }
 }
