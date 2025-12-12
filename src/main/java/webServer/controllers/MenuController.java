@@ -6,7 +6,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired; // Adicionado para construtor se necessário
-import java.util.Collections; // Import para lista vazia
+
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Collections;
 import webServer.GatewayInterface;
 import webServer.PageInfo;
 import webServer.SystemStats;
@@ -14,10 +18,9 @@ import webServer.FileManipulation;
 import webServer.webSock.StatsNotifierService;
 
 import java.io.IOException;
-import java.rmi.Naming;
 import java.util.List;
 import java.util.Properties;
-import java.lang.Math; // Necessário para Math.min
+import java.lang.Math;
 
 @Controller
 public class MenuController {
@@ -25,30 +28,52 @@ public class MenuController {
     private GatewayInterface gateway;
     private final StatsNotifierService statsNotifierService;
     private static final int PAGE_SIZE = 10;
+    private final String gatewayName;
+    private final String gatewayIp;
+    private final int gatewayPort;
 
-    // Construtor corrigido e simplificado
-    @Autowired // Mantenha @Autowired se a injeção do StatsNotifierService funcionar
+    @Autowired
     public MenuController(StatsNotifierService statsNotifierService) {
         this.statsNotifierService = statsNotifierService;
+        String name = "", ip = "", portStr = "";
+        int port = 0;
         try {
             List<String> cfg = FileManipulation.lineSplitter("config.txt", 1, ";");
-            String name = cfg.get(0).trim();
-            String ip = cfg.get(1).trim();
-            int port = Integer.parseInt(cfg.get(2).trim());
-
-            // Nota: Naming.lookup está a ser usado. Manter.
-            String url = "rmi://" + ip + ":" + port + "/" + name;
-            System.out.println("[RMI] Connecting to: " + url);
-
-            gateway = (GatewayInterface) Naming.lookup(url);
-
-            System.out.println("[RMI] Connected successfully!");
-
+            name = cfg.get(0).trim();
+            ip = cfg.get(1).trim();
+            portStr = cfg.get(2).trim();
+            port = Integer.parseInt(portStr);
         } catch (Exception e) {
-            System.err.println("[RMI] Failed to connect:");
+            System.err.println("[RMI] Erro ao ler config.txt: " + e.getMessage());
             e.printStackTrace();
         }
+
+        // Guarda as variáveis para reconexão
+        this.gatewayName = name;
+        this.gatewayIp = ip;
+        this.gatewayPort = port;
+
+        connectToGateway();
     }
+    private void connectToGateway() {
+        if (gatewayName.isEmpty() || gatewayIp.isEmpty() || gatewayPort == 0) return;
+
+        try {
+            System.out.printf("[RMI] Tentando conectar/reconectar ao Gateway '%s' em %s:%d...%n",
+                    gatewayName, gatewayIp, gatewayPort);
+
+            Registry registry = LocateRegistry.getRegistry(gatewayIp, gatewayPort);
+            this.gateway = (GatewayInterface) registry.lookup(gatewayName);
+
+            System.out.println("[RMI] Conexão/Reconexão bem-sucedida!");
+
+        } catch (Exception e) {
+            System.err.println("[RMI] Falha na conexão/reconexão: " + e.getMessage());
+            this.gateway = null;
+        }
+    }
+
+
 
     @GetMapping("/")
     public String home() {
@@ -63,10 +88,15 @@ public class MenuController {
     @PostMapping("/addUrl")
     public String indexURL(@RequestParam("url") String url, Model model) {
         try {
+            if (gateway == null) connectToGateway();
+            if (gateway == null) throw new RemoteException("Gateway indisponível.");
             gateway.addUrl(url);
             statsNotifierService.sendImmediateStatsUpdate();
             model.addAttribute("mensagem", "URL enviada ao gateway: " + url);
             model.addAttribute("tipo", "sucesso");
+        } catch (RemoteException re) {
+            model.addAttribute("mensagem", "Erro de comunicação com o Gateway: " + re.getMessage());
+            model.addAttribute("tipo", "erro");
         } catch (Exception e) {
             model.addAttribute("mensagem", "Erro ao indexar URL: " + e.getMessage());
             model.addAttribute("tipo", "erro");
@@ -96,29 +126,31 @@ public class MenuController {
     // MÉTODO UNIFICADO: Processa a pesquisa e carrega a página N
     private String showResultsPage(String termos, int currentPage, Model model) {
         try {
-            // 1. OBTÉM TODOS OS RESULTADOS NOVAMENTE DO RMI (Compromisso sem Sessão)
+            if (gateway == null) connectToGateway();
+            if (gateway == null) throw new RemoteException("Gateway indisponível.");
+
+            // Obtém os resultados ordenados do RMI
             List<PageInfo> allResults = gateway.search(termos);
             statsNotifierService.sendImmediateStatsUpdate();
             String analysis = callGeminiAnalysis(termos);
 
-            // 2. Cálculo dos índices da página atual
+            // Paginação: Extrai a lista de 10 resultados para a página atual
             int start = currentPage * PAGE_SIZE;
             int end = Math.min(start + PAGE_SIZE, allResults.size());
 
-            // 3. Extrai apenas os resultados da página
             List<PageInfo> pageResults;
             if (start < end) {
+                // A ordem de ranking é preservada pela subList
                 pageResults = allResults.subList(start, end);
             } else {
                 pageResults = Collections.emptyList();
             }
 
-
-            // 4. Variáveis de navegação
+            // Variáveis de navegação
             boolean hasNext = end < allResults.size();
             boolean hasPrev = currentPage > 0;
 
-            // Adiciona todos os atributos necessários para a View
+            // Adiciona atributos para a View
             model.addAttribute("mensagem", "Pesquisa realizada: " + termos);
             model.addAttribute("tipo", "sucesso");
             model.addAttribute("resultados", pageResults);
@@ -131,10 +163,16 @@ public class MenuController {
             model.addAttribute("hasNext", hasNext);
             model.addAttribute("hasPrev", hasPrev);
 
+        } catch (RemoteException e) {
+            System.err.println("⚠ Falha RMI em search. Tentando reconectar...");
+            connectToGateway();
+            model.addAttribute("mensagem", "Erro RMI: Gateway indisponível. Tente novamente.");
+            model.addAttribute("tipo", "erro");
+            return "mainMenu";
         } catch (Exception e) {
             model.addAttribute("mensagem", "Erro ao pesquisar: " + e.getMessage());
             model.addAttribute("tipo", "erro");
-            return "mainMenu"; // Retorna ao menu em caso de falha RMI/Exceção
+            return "mainMenu";
         }
         return "resultTerms";
     }
@@ -143,6 +181,9 @@ public class MenuController {
     public String searchInlinks(@RequestParam("link") String link, Model model) {
 
         try {
+            if (gateway == null) connectToGateway();
+            if (gateway == null) throw new RemoteException("Gateway indisponível.");
+
             List<String> inlinks = gateway.searchInlinks(link);
             statsNotifierService.sendImmediateStatsUpdate();
 
@@ -151,6 +192,11 @@ public class MenuController {
             model.addAttribute("link", link);
             model.addAttribute("inlinks", inlinks);
 
+        } catch (RemoteException e) {
+            System.err.println("⚠ Falha RMI em inlinks. Tentando reconectar...");
+            connectToGateway();
+            model.addAttribute("mensagem", "Erro RMI: Gateway indisponível. Tente novamente.");
+            model.addAttribute("tipo", "erro");
         } catch (Exception e) {
             model.addAttribute("mensagem", "Erro ao pesquisar inlinks: " + e.getMessage());
             model.addAttribute("tipo", "erro");
@@ -161,10 +207,18 @@ public class MenuController {
 
     @GetMapping("/stats")
     public String stats(Model model) {
-        // ... (Seu código original de stats) ...
         try {
+            if (gateway == null) connectToGateway();
+            if (gateway == null) throw new RemoteException("Gateway indisponível.");
+
             SystemStats stats = gateway.getSystemStats();
             model.addAttribute("stats", stats);
+
+        } catch (RemoteException e) {
+            System.err.println(" Falha RMI em stats. Tentando reconectar...");
+            connectToGateway();
+            model.addAttribute("mensagem", "Erro RMI: Gateway indisponível. Tente novamente.");
+            model.addAttribute("tipo", "erro");
         } catch (Exception e) {
             model.addAttribute("mensagem", "Erro ao obter estatísticas: " + e.getMessage());
             model.addAttribute("tipo", "erro");

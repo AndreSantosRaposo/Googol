@@ -17,5 +17,5 @@ public class DebugConfig {
 
 
     // Ativar/desativar todos os debugs de uma vez
-    public static boolean DEBUG_ALL = false;
+    public static boolean DEBUG_ALL = true;
 }

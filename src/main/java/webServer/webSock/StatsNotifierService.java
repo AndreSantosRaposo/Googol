@@ -72,7 +72,19 @@ public class StatsNotifierService {
         try {
             // 2. Ação RMI: Puxa o estado atualizado do sistema.
             SystemStats currentStats = gateway.getSystemStats();
+            System.out.println("--- DEBUG STATS NOTIFIER ---");
 
+            // Imprimir Top 10 Searches:
+            List<?> top10 = currentStats.getTop10Searches();
+            System.out.println("TIPO DE DADOS TOP 10: " + top10.getClass().getName());
+            System.out.println("VALORES TOP 10 BRUTOS: " + top10);
+
+            // Imprimir um valor de Barrel para comparação:
+            System.out.println("TESTE BARREL (OK): " + currentStats.getBarrelMetrics().keySet());
+            System.out.println("--- DEBUG STATS NOTIFIER ---");
+            // =========================================================
+            // END DEBUG TEMPORÁRIO
+            // =========
             // 3. SERVER PUSH: Envia o objeto JSON para o tópico do WebSocket.
             template.convertAndSend("/topic/stats", currentStats);
             System.out.println("[StatsNotifier] Event-driven stats update sent (PUSH).");
