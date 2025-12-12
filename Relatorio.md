@@ -197,6 +197,38 @@ Um Barrel ao iniciar:
 - `Barrel.notifyDownloadersUp()` - Broadcast de disponibilidade após inicialização
 - `Gateway.rebindBarrel()` - Reconexão do Gateway aos Barrels
 
+## 5. Integração com Serviços REST
+
+### 5.1 Visão Geral
+O sistema integra-se com APIs REST externas:
+- **Hacker News API**: Indexação automática de top stories relacionadas com os termos de pesquisa
+- **Google Gemini API**: Análise contextualizada dos resultados usando IA generativa
+
+### 5.2 Hacker News Integration
+
+#### Endpoints Utilizados
+- `https://hacker-news.firebaseio.com/v0/topstories.json` - Lista de IDs das top stories
+- `https://hacker-news.firebaseio.com/v0/item/{id}.json` - Detalhes de cada story
+
+#### Fluxo de Indexação
+1. Cliente solicita indexação via interface web
+2. WebServer obtém lista de top stories (HTTP GET)
+3. Para cada story, verifica se o texto contém termos da pesquisa
+4. URLs relevantes são enviados ao Gateway via RMI para indexação
+5. Downloaders processam URLs e enviam conteúdo aos Barrels
+
+### 5.3 Google Gemini API (Análise Contextualizada)
+
+#### Implementação`
+
+**API Utilizada**: Google Generative AI - Gemini 2.5 Flash  
+**Endpoint**: `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent`
+
+#### Fluxo de Análise
+1. Após pesquisa bem-sucedida, WebServer invoca `callGeminiAnalysis(termos)`
+2. Prompt construído com termos de pesquisa: `These are the search terms: {termos}. Generate a clear 4–5 sentence contextual analysis in Portuguese`
+
+
 ## 6. WebSocket
 Para a página de estatísticas (/stats), foi implementado um mecanismo de Server Push para garantir que os dados (Top 10 pesquisas e métricas dos Barrels) são atualizados em todos os clientes conectados sem necessidade de refresh.
 
@@ -222,7 +254,7 @@ Para a distribuição de tarefas foi seguida a sugestão 1 do enunciado, com alg
 
 1-Integração de REST WebServices 
 
-2-Arquitetura geral do projeto FALTA AQUI CENAS, MAS E MELHOR SERES TU
+2-Arquitetura geral do projeto e endpoints 
   
 ## 8. Testes Realizados
 
@@ -234,6 +266,7 @@ Para a distribuição de tarefas foi seguida a sugestão 1 do enunciado, com alg
 | Persistência com MapDB                        | Dados mantidos após reinício                                         | PASS      | Dados apenas são armazenados durante shutdown (redundancia de multiplos barrels permite reduzir este reduzir overhead) |
 | Barrel recupera estado consistente após crash | Após barrel iniciar possuir a mesma informação que barrels já ativos | PASS      |                                                                                                                        |
 | Crash do Downloader                           | Reconexão automática funciona                                        | PASS      |                                                                                                                        |
+| Crash da webapp                               | Reconexão automática                                                 | PASS      |                                                                                                                        |
 
 
 
